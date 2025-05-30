@@ -1,31 +1,27 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import mascote from '../assets/mascote.png';
+import React from "react";
+import { Link } from "react-router-dom";
+import mascote from "../assets/mascote.png";
 
 export default function Login() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <div style={styles.formContainer}>
-          <h1 style={styles.logo}>HouseFix</h1>
+        <div style={styles.leftColumn}>
+          <h1 style={styles.title}>HouseFix</h1>
           <p style={styles.subtitle}>Bem-vindo de volta!</p>
-          <input
-            type="text"
-            placeholder="E-mail ou telefone"
-            style={styles.input}
-          />
-          <input
-            type="password"
-            placeholder="Senha"
-            style={styles.input}
-          />
+
+          <input type="text" placeholder="Telefone ou e-mail" style={styles.input} />
+          <input type="password" placeholder="Senha" style={styles.input} />
+
           <button style={styles.button}>Entrar</button>
-          <p style={styles.registerLink}>
+
+          <p style={styles.link}>
             Não tem uma conta? <Link to="/registrar">Crie uma conta</Link>
           </p>
         </div>
-        <div style={styles.imageContainer}>
-          <img src={mascote} alt="Mascote HouseFix" style={styles.image} />
+
+        <div style={styles.rightColumn}>
+          <img src={mascote} alt="Mascote HouseFix" style={styles.mascote} />
         </div>
       </div>
     </div>
@@ -34,71 +30,74 @@ export default function Login() {
 
 const styles = {
   container: {
-    height: '100vh',
-    backgroundColor: '#e8f1fb',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: "100vh",
+    backgroundColor: "#eaf3fc",
   },
   card: {
-    background: '#fff',
-    borderRadius: '16px',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-    display: 'flex',
-    maxWidth: '900px',
-    width: '100%',
-    overflow: 'hidden',
+    display: "flex",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    overflow: "hidden",
+    boxShadow: "0 8px 20px rgba(0, 0, 0, 0.1)",
+    width: "90%",
+    maxWidth: 950,
+    height: 500,
   },
-  formContainer: {
+  leftColumn: {
     flex: 1,
-    padding: '48px 32px',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
+    padding: "50px 40px",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
   },
-  logo: {
-    fontSize: '32px',
-    fontWeight: 'bold',
-    color: '#0a3d91',
-    marginBottom: '8px',
+  rightColumn: {
+    flex: 1,
+    height: "100%",
+  },
+mascote: {
+  width: "100%",
+  height: "100%",
+  objectFit: "contain",        // em vez de "cover"
+  objectPosition: "center",    // centraliza imagem
+  borderTopRightRadius: 12,
+  borderBottomRightRadius: 12,
+  backgroundColor: "#E3F2FD",  // opcional: fundo harmônico
+  padding: "10px"
+}
+,
+  title: {
+    fontSize: 32,
+    color: "#0d47a1",
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: '16px',
-    color: '#666',
-    marginBottom: '24px',
+    fontSize: 16,
+    marginBottom: 30,
+    color: "#333",
   },
   input: {
-    padding: '12px',
-    marginBottom: '16px',
-    borderRadius: '8px',
-    border: '1px solid #ccc',
-    fontSize: '14px',
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 15,
+    borderRadius: 6,
+    border: "1px solid #ccc",
+    backgroundColor: "#e3f2fd",
   },
   button: {
-    padding: '14px',
-    backgroundColor: '#0a3d91',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '16px',
-    cursor: 'pointer',
-    marginTop: '8px',
+    padding: 14,
+    fontSize: 16,
+    backgroundColor: "#0d47a1",
+    color: "#fff",
+    border: "none",
+    borderRadius: 6,
+    cursor: "pointer",
+    marginTop: 10,
   },
-  registerLink: {
-    marginTop: '16px',
-    fontSize: '14px',
-    color: '#444',
-  },
-  imageContainer: {
-    flex: 1,
-    backgroundColor: '#e8f1fb',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: '24px',
-  },
-  image: {
-    width: '100%',
-    maxWidth: '350px',
+  link: {
+    marginTop: 15,
+    fontSize: 14,
   },
 };
