@@ -1,113 +1,67 @@
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import mascote from "../assets/mascote.png";
 
 export default function Register() {
-  const navigate = useNavigate();
-
-  const [form, setForm] = useState({
-    nome: "",
-    email: "",
-    telefone: "",
-    nascimento: "",
-    senha: "",
-    confirmarSenha: "",
-  });
-
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleRegister = (e) => {
-    e.preventDefault();
-
-    if (
-      !form.nome ||
-      !form.email ||
-      !form.telefone ||
-      !form.nascimento ||
-      !form.senha ||
-      !form.confirmarSenha
-    ) {
-      alert("Preencha todos os campos.");
-      return;
-    }
-
-    if (form.senha !== form.confirmarSenha) {
-      alert("As senhas não coincidem.");
-      return;
-    }
-
-    // Aqui você pode adicionar o salvamento dos dados
-
-    alert("Conta criada com sucesso!");
-    navigate("/");
-  };
+  const [tipoUsuario, setTipoUsuario] = useState("cliente");
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
+        {/* Coluna esquerda com formulário */}
         <div style={styles.leftColumn}>
-          <h1 style={styles.title}>Crie sua conta</h1>
-          <p style={styles.subtitle}>Preencha seus dados para começar a usar o HouseFix.</p>
+          <h1 style={styles.title}>HouseFix</h1>
+          <p style={styles.subtitle}>Crie sua conta gratuita</p>
 
-          <form style={styles.form} onSubmit={handleRegister}>
-            <input
-              type="text"
-              name="nome"
-              placeholder="Nome completo"
-              style={styles.input}
-              value={form.nome}
-              onChange={handleChange}
-              required
-            />
-            <input
-              type="email"
-              name="email"
-              placeholder="E-mail"
-              style={styles.input}
-              value={form.email}
-              onChange={handleChange}
-              required
-            />
-            <input
-              type="tel"
-              name="telefone"
-              placeholder="Telefone"
-              style={styles.input}
-              value={form.telefone}
-              onChange={handleChange}
-              required
-            />
-            <input
-              type="date"
-              name="nascimento"
-              placeholder="Data de nascimento"
-              style={styles.input}
-              value={form.nascimento}
-              onChange={handleChange}
-              required
-            />
-            <input
-              type="password"
-              name="senha"
-              placeholder="Senha"
-              style={styles.input}
-              value={form.senha}
-              onChange={handleChange}
-              required
-            />
-            <input
-              type="password"
-              name="confirmarSenha"
-              placeholder="Confirmar senha"
-              style={styles.input}
-              value={form.confirmarSenha}
-              onChange={handleChange}
-              required
-            />
+          <div style={styles.selector}>
+            <button
+              style={{
+                ...styles.selectorButton,
+                backgroundColor: tipoUsuario === "cliente" ? "#0d47a1" : "#ccc",
+                color: tipoUsuario === "cliente" ? "#fff" : "#000",
+              }}
+              onClick={() => setTipoUsuario("cliente")}
+            >
+              Cliente
+            </button>
+            <button
+              style={{
+                ...styles.selectorButton,
+                backgroundColor: tipoUsuario === "prestador" ? "#0d47a1" : "#ccc",
+                color: tipoUsuario === "prestador" ? "#fff" : "#000",
+              }}
+              onClick={() => setTipoUsuario("prestador")}
+            >
+              Prestador
+            </button>
+          </div>
 
-            <button type="submit" style={styles.button}>Registrar</button>
+          <form style={styles.form}>
+            <input type="text" placeholder="Nome completo" style={styles.input} required />
+            <input type="email" placeholder="E-mail" style={styles.input} required />
+            <input type="tel" placeholder="Telefone" style={styles.input} required />
+            <input type="password" placeholder="Senha" style={styles.input} required />
+            <input type="password" placeholder="Confirmar senha" style={styles.input} required />
+            <input type="date" placeholder="Data de nascimento" style={styles.input} required />
+
+            {tipoUsuario === "prestador" && (
+              <>
+                <input type="text" placeholder="CPF ou CNPJ" style={styles.input} required />
+                <select style={styles.input}>
+                  <option value="">Especialidade</option>
+                  <option>Elétrica</option>
+                  <option>Hidráulica</option>
+                  <option>Ar Condicionado</option>
+                  <option>Pintura</option>
+                  <option>Jardinagem</option>
+                  <option>Marcenaria</option>
+                </select>
+              </>
+            )}
+
+            <button type="submit" style={styles.button}>
+              Registrar
+            </button>
           </form>
 
           <p style={styles.link}>
@@ -115,6 +69,7 @@ export default function Register() {
           </p>
         </div>
 
+        {/* Coluna direita com mascote */}
         <div style={styles.rightColumn}>
           <img src={mascote} alt="Mascote HouseFix" style={styles.mascote} />
         </div>
@@ -132,45 +87,56 @@ const styles = {
     backgroundColor: "#eaf3fc",
   },
   card: {
-    display: "flex",
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    overflow: "hidden",
-    boxShadow: "0 8px 20px rgba(0, 0, 0, 0.1)",
-    width: "90%",
-    maxWidth: 950,
-    height: "auto",
-  },
+  display: "flex",
+  backgroundColor: "#fff",
+  borderRadius: 10,
+  overflow: "hidden",
+  boxShadow: "0 8px 20px rgba(0, 0, 0, 0.1)",
+  width: "90%",
+  maxWidth: 950,
+  minHeight: 580,          // deixa altura mínima fixa...
+  maxHeight: "auto",       // ...mas permite crescer se necessário
+},
   leftColumn: {
     flex: 1,
-    padding: "50px 40px",
+    padding: "40px 35px",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
   },
   rightColumn: {
-    flex: 1,
-    height: "100%",
-  },
+  flex: 1,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#E3F2FD",
+  padding: "20px",
+},
   mascote: {
-    width: "100%",
-    height: "100%",
-    objectFit: "contain",
-    objectPosition: "center",
-    borderTopRightRadius: 12,
-    borderBottomRightRadius: 12,
-    backgroundColor: "#E3F2FD",
-    padding: "10px",
-  },
+  maxHeight: "100%",
+  maxWidth: "100%",
+  objectFit: "contain",
+},
   title: {
-    fontSize: 28,
+    fontSize: 32,
     color: "#0d47a1",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 16,
     marginBottom: 20,
-    color: "#555",
+    color: "#333",
+  },
+  selector: {
+    display: "flex",
+    gap: 10,
+    marginBottom: 16,
+  },
+  selectorButton: {
+    padding: "10px 18px",
+    border: "none",
+    borderRadius: 6,
+    cursor: "pointer",
   },
   form: {
     display: "flex",
@@ -182,7 +148,7 @@ const styles = {
     fontSize: 16,
     borderRadius: 6,
     border: "1px solid #ccc",
-    backgroundColor: "#e3f2fd",
+    backgroundColor: "#f1f8ff",
   },
   button: {
     padding: 14,
@@ -191,8 +157,8 @@ const styles = {
     color: "#fff",
     border: "none",
     borderRadius: 6,
-    cursor: "pointer",
     marginTop: 10,
+    cursor: "pointer",
   },
   link: {
     marginTop: 15,

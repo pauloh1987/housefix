@@ -14,6 +14,8 @@ import Pagamentos from './pages/Pagamentos';
 import Avaliacoes from './pages/Avaliacoes';
 import Tipos from './pages/Tipos';
 import Register from './pages/Register';
+import Agendar from './pages/Agendar'; 
+
 
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -31,6 +33,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/avaliacoes" element={<Avaliacoes />} />
         <Route path="/tipos" element={<Tipos />} />
         <Route path="/registrar" element={<Register />} />
+        <Route path="/agendar" element={<Agendar />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>
