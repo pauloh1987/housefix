@@ -1,35 +1,53 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState } from "react";
 
-// Simulação de dados (cliente visualiza seus agendamentos)
-const agendamentos = [
-  { id: 1, servico: "Ar-Condicionado", data: "30/05/2025", horario: "17:30", status: "Pendente" },
-  { id: 2, servico: "Encanamento", data: "15/06/2025", horario: "14:00", status: "Confirmado" },
-  { id: 3, servico: "Elétrica", data: "10/06/2025", horario: "09:00", status: "Cancelado" },
+const agendamentosIniciais = [
+  { id: 1, servico: "Instalação de Ar", data: "2025-06-01", horario: "14:00", status: "Pendente" },
+  { id: 2, servico: "Reparo Elétrico", data: "2025-06-03", horario: "10:30", status: "Pendente" },
 ];
 
-const Agendamentos = () => {
+const PainelPrestador = () => {
+  const [agendamentos, setAgendamentos] = useState(agendamentosIniciais);
+
+  const marcarComoConcluido = (id) => {
+    const atualizados = agendamentos.map((item) =>
+      item.id === id ? { ...item, status: "Concluído" } : item
+    );
+    setAgendamentos(atualizados);
+  };
+
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <h2 style={styles.title}>Meus Agendamentos</h2>
-        <p style={styles.subtitle}>Confira seus agendamentos recentes abaixo.</p>
+        <h2 style={styles.title}>Agendamentos Recebidos</h2>
+        <p style={styles.subtitle}>Gerencie seus atendimentos abaixo.</p>
 
         <div style={styles.list}>
           {agendamentos.map((item) => (
             <div key={item.id} style={styles.item}>
               <div>
                 <p style={styles.servico}>{item.servico}</p>
-                <div style={styles.detalhes}>
-                  <span>📅 {item.data}</span>
-                  <span style={{ margin: "0 10px" }}>|</span>
-                  <span>⏰ {item.horario}</span>
-                </div>
+                <p style={styles.detalhes}>📅 {item.data} às ⏰ {item.horario}</p>
               </div>
-
-              <div style={styles.rightBox}>
-                <span style={styles.status}>{item.status}</span>
-                <Link to={`/chat/${item.id}`} style={styles.chatBotao}>💬 Conversar</Link>
+              <div style={styles.acoes}>
+                <span
+                  style={{
+                    ...styles.status,
+                    backgroundColor:
+                      item.status === "Concluído" ? "#dcfce7" : "#e0edff",
+                    color:
+                      item.status === "Concluído" ? "#15803d" : "#2563eb",
+                  }}
+                >
+                  {item.status}
+                </span>
+                {item.status !== "Concluído" && (
+                  <button
+                    onClick={() => marcarComoConcluido(item.id)}
+                    style={styles.botao}
+                  >
+                    Marcar como Concluído
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -89,35 +107,29 @@ const styles = {
   detalhes: {
     fontSize: 14,
     color: "#444",
-    display: "flex",
-    alignItems: "center",
-    gap: 4,
   },
-  rightBox: {
+  acoes: {
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-end",
     gap: 6,
   },
   status: {
-    backgroundColor: "#e5edff",
-    color: "#2563eb",
     padding: "6px 14px",
     borderRadius: 999,
     fontSize: 13,
     fontWeight: "600",
   },
-  chatBotao: {
+  botao: {
     marginTop: 4,
-    textDecoration: "none",
     backgroundColor: "#0B4DA1",
     color: "#fff",
-    padding: "6px 12px",
+    border: "none",
+    padding: "8px 12px",
     borderRadius: 8,
+    cursor: "pointer",
     fontSize: 13,
-    fontWeight: "bold",
-    textAlign: "center",
   },
 };
 
-export default Agendamentos;
+export default PainelPrestador;

@@ -15,8 +15,9 @@ import Avaliacoes from './pages/Avaliacoes';
 import Tipos from './pages/Tipos';
 import Register from './pages/Register';
 import Agendar from './pages/Agendar'; 
-
-
+import PainelPrestador from './pages/PainelPrestador'; 
+import Chat from './pages/Chat';
+import SelecaoCadastro from './pages/SelecaoCadastro';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -33,7 +34,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/avaliacoes" element={<Avaliacoes />} />
         <Route path="/tipos" element={<Tipos />} />
         <Route path="/registrar" element={<Register />} />
+        <Route path="/cadastro" element={<Register />} />
         <Route path="/agendar" element={<Agendar />} />
+        <Route path="/painel-prestador" element={<PainelPrestador />} />
+        <Route path="/chat/:agendamentoId" element={<Chat />} />
+        <Route path="/escolher-cadastro" element={<SelecaoCadastro />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>

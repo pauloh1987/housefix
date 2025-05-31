@@ -1,14 +1,50 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import mascote from "../assets/mascote.png";
 
 export default function Register() {
-  const [tipoUsuario, setTipoUsuario] = useState("cliente");
+  const [tipoUsuario, setTipoUsuario] = useState(localStorage.getItem("tipoCadastro") || "cliente");
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [senha, setSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
+  const [nascimento, setNascimento] = useState("");
+  const [cpfCnpj, setCpfCnpj] = useState("");
+  const [especialidade, setEspecialidade] = useState("");
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const tipo = localStorage.getItem("tipoCadastro");
+    if (!tipo) navigate("/escolher-cadastro");
+  }, []);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (senha !== confirmarSenha) {
+      alert("As senhas não coincidem.");
+      return;
+    }
+
+    const novoUsuario = {
+      nome,
+      email,
+      telefone,
+      nascimento,
+      senha,
+      tipo: tipoUsuario,
+      ...(tipoUsuario === "prestador" && { cpfCnpj, especialidade }),
+    };
+
+    localStorage.setItem("usuario", JSON.stringify(novoUsuario));
+    navigate("/login");
+  };
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        {/* Coluna esquerda com formulário */}
         <div style={styles.leftColumn}>
           <h1 style={styles.title}>HouseFix</h1>
           <p style={styles.subtitle}>Crie sua conta gratuita</p>
@@ -36,18 +72,72 @@ export default function Register() {
             </button>
           </div>
 
-          <form style={styles.form}>
-            <input type="text" placeholder="Nome completo" style={styles.input} required />
-            <input type="email" placeholder="E-mail" style={styles.input} required />
-            <input type="tel" placeholder="Telefone" style={styles.input} required />
-            <input type="password" placeholder="Senha" style={styles.input} required />
-            <input type="password" placeholder="Confirmar senha" style={styles.input} required />
-            <input type="date" placeholder="Data de nascimento" style={styles.input} required />
+          <form style={styles.form} onSubmit={handleSubmit}>
+            <input
+              type="text"
+              placeholder="Nome completo"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              style={styles.input}
+              required
+            />
+            <input
+              type="email"
+              placeholder="E-mail"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={styles.input}
+              required
+            />
+            <input
+              type="tel"
+              placeholder="Telefone"
+              value={telefone}
+              onChange={(e) => setTelefone(e.target.value)}
+              style={styles.input}
+              required
+            />
+            <input
+              type="password"
+              placeholder="Senha"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              style={styles.input}
+              required
+            />
+            <input
+              type="password"
+              placeholder="Confirmar senha"
+              value={confirmarSenha}
+              onChange={(e) => setConfirmarSenha(e.target.value)}
+              style={styles.input}
+              required
+            />
+            <input
+              type="date"
+              placeholder="Data de nascimento"
+              value={nascimento}
+              onChange={(e) => setNascimento(e.target.value)}
+              style={styles.input}
+              required
+            />
 
             {tipoUsuario === "prestador" && (
               <>
-                <input type="text" placeholder="CPF ou CNPJ" style={styles.input} required />
-                <select style={styles.input}>
+                <input
+                  type="text"
+                  placeholder="CPF ou CNPJ"
+                  value={cpfCnpj}
+                  onChange={(e) => setCpfCnpj(e.target.value)}
+                  style={styles.input}
+                  required
+                />
+                <select
+                  value={especialidade}
+                  onChange={(e) => setEspecialidade(e.target.value)}
+                  style={styles.input}
+                  required
+                >
                   <option value="">Especialidade</option>
                   <option>Elétrica</option>
                   <option>Hidráulica</option>
@@ -59,17 +149,14 @@ export default function Register() {
               </>
             )}
 
-            <button type="submit" style={styles.button}>
-              Registrar
-            </button>
+            <button type="submit" style={styles.button}>Registrar</button>
           </form>
 
           <p style={styles.link}>
-            Já tem uma conta? <Link to="/">Entrar</Link>
+            Já tem uma conta? <Link to="/login">Entrar</Link>
           </p>
         </div>
 
-        {/* Coluna direita com mascote */}
         <div style={styles.rightColumn}>
           <img src={mascote} alt="Mascote HouseFix" style={styles.mascote} />
         </div>
@@ -87,16 +174,15 @@ const styles = {
     backgroundColor: "#eaf3fc",
   },
   card: {
-  display: "flex",
-  backgroundColor: "#fff",
-  borderRadius: 10,
-  overflow: "hidden",
-  boxShadow: "0 8px 20px rgba(0, 0, 0, 0.1)",
-  width: "90%",
-  maxWidth: 950,
-  minHeight: 580,          // deixa altura mínima fixa...
-  maxHeight: "auto",       // ...mas permite crescer se necessário
-},
+    display: "flex",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    overflow: "hidden",
+    boxShadow: "0 8px 20px rgba(0, 0, 0, 0.1)",
+    width: "90%",
+    maxWidth: 950,
+    minHeight: 580,
+  },
   leftColumn: {
     flex: 1,
     padding: "40px 35px",
@@ -105,18 +191,18 @@ const styles = {
     justifyContent: "center",
   },
   rightColumn: {
-  flex: 1,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: "#E3F2FD",
-  padding: "20px",
-},
+    flex: 1,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#E3F2FD",
+    padding: "20px",
+  },
   mascote: {
-  maxHeight: "100%",
-  maxWidth: "100%",
-  objectFit: "contain",
-},
+    maxHeight: "100%",
+    maxWidth: "100%",
+    objectFit: "contain",
+  },
   title: {
     fontSize: 32,
     color: "#0d47a1",
