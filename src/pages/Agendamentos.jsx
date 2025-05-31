@@ -1,46 +1,60 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { auth, db } from "../firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
-// Simulação de dados (cliente visualiza seus agendamentos)
-const agendamentos = [
-  { id: 1, servico: "Ar-Condicionado", data: "30/05/2025", horario: "17:30", status: "Pendente" },
-  { id: 2, servico: "Encanamento", data: "15/06/2025", horario: "14:00", status: "Confirmado" },
-  { id: 3, servico: "Elétrica", data: "10/06/2025", horario: "09:00", status: "Cancelado" },
-];
+export default function MeusAgendamentos() {
+  const [agendamentos, setAgendamentos] = useState([]);
+  const [usuarioId, setUsuarioId] = useState(null);
 
-const Agendamentos = () => {
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUsuarioId(user.uid);
+        carregarAgendamentos(user.uid);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const carregarAgendamentos = async (uid) => {
+    const q = query(collection(db, "agendamentos"), where("clienteId", "==", uid));
+    const snapshot = await getDocs(q);
+    const dados = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    setAgendamentos(dados);
+  };
+
   return (
-    <div style={styles.page}>
+    <div style={styles.container}>
       <div style={styles.card}>
         <h2 style={styles.title}>Meus Agendamentos</h2>
-        <p style={styles.subtitle}>Confira seus agendamentos recentes abaixo.</p>
-
-        <div style={styles.list}>
-          {agendamentos.map((item) => (
-            <div key={item.id} style={styles.item}>
-              <div>
-                <p style={styles.servico}>{item.servico}</p>
-                <div style={styles.detalhes}>
-                  <span>📅 {item.data}</span>
-                  <span style={{ margin: "0 10px" }}>|</span>
-                  <span>⏰ {item.horario}</span>
+        {agendamentos.length === 0 ? (
+          <p style={styles.subtitle}>Nenhum agendamento encontrado.</p>
+        ) : (
+          <div style={styles.list}>
+            {agendamentos.map((item) => (
+              <div key={item.id} style={styles.item}>
+                <div>
+                  <p style={styles.servico}>{item.especialidade}</p>
+                  <p style={styles.detalhes}>{item.descricao}</p>
+                  <p style={styles.detalhes}>📅 {item.data} às ⏰ {item.hora}</p>
                 </div>
+                <span style={{
+                  ...styles.status,
+                  backgroundColor: item.status === "Concluído" ? "#dcfce7" : item.status === "Confirmado" ? "#e0f2fe" : "#fffbea",
+                  color: item.status === "Concluído" ? "#15803d" : item.status === "Confirmado" ? "#2563eb" : "#b45309",
+                }}>{item.status}</span>
               </div>
-
-              <div style={styles.rightBox}>
-                <span style={styles.status}>{item.status}</span>
-                <Link to={`/chat/${item.id}`} style={styles.chatBotao}>💬 Conversar</Link>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
-};
+}
 
 const styles = {
-  page: {
+  container: {
     backgroundColor: "#f3f6fb",
     minHeight: "100vh",
     display: "flex",
@@ -59,17 +73,17 @@ const styles = {
     fontSize: 26,
     fontWeight: "bold",
     color: "#0B0F28",
-    marginBottom: 8,
+    marginBottom: 12,
   },
   subtitle: {
     fontSize: 15,
     color: "#666",
-    marginBottom: 24,
   },
   list: {
     display: "flex",
     flexDirection: "column",
     gap: 16,
+    marginTop: 20,
   },
   item: {
     backgroundColor: "#f9fafb",
@@ -89,35 +103,11 @@ const styles = {
   detalhes: {
     fontSize: 14,
     color: "#444",
-    display: "flex",
-    alignItems: "center",
-    gap: 4,
-  },
-  rightBox: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-end",
-    gap: 6,
   },
   status: {
-    backgroundColor: "#e5edff",
-    color: "#2563eb",
     padding: "6px 14px",
     borderRadius: 999,
     fontSize: 13,
     fontWeight: "600",
   },
-  chatBotao: {
-    marginTop: 4,
-    textDecoration: "none",
-    backgroundColor: "#0B4DA1",
-    color: "#fff",
-    padding: "6px 12px",
-    borderRadius: 8,
-    fontSize: 13,
-    fontWeight: "bold",
-    textAlign: "center",
-  },
 };
-
-export default Agendamentos;

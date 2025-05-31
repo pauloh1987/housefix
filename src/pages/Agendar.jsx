@@ -1,176 +1,135 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { db, auth } from "../firebase";
+import { collection, addDoc, getDocs, query, where } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 
-const Agendar = () => {
-  const [formData, setFormData] = useState({
-    servico: "",
-    data: "",
-    horario: "",
-    observacao: "",
-  });
-
-  const [modalAberto, setModalAberto] = useState(false);
+export default function AgendarServico() {
+  const [especialidade, setEspecialidade] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [data, setData] = useState("");
+  const [hora, setHora] = useState("");
+  const [enviando, setEnviando] = useState(false);
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = (e) => {
+  const handleAgendar = async (e) => {
     e.preventDefault();
-    setModalAberto(true);
-  };
+    setEnviando(true);
+    try {
+      const clienteId = auth.currentUser.uid;
 
-  const fecharModal = () => {
-    setModalAberto(false);
-    navigate("/agendamentos");
+      await addDoc(collection(db, "agendamentos"), {
+        clienteId,
+        especialidade,
+        descricao,
+        data,
+        hora,
+        status: "Pendente",
+      });
+
+      alert("Agendamento enviado! Você será notificado quando for confirmado.");
+      navigate("/agendamentos");
+    } catch (err) {
+      alert("Erro ao agendar serviço: " + err.message);
+    } finally {
+      setEnviando(false);
+    }
   };
 
   return (
     <div style={styles.container}>
-      <div style={styles.formWrapper}>
-        <h2 style={styles.title}>Agendar Novo Serviço</h2>
-
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <label style={styles.label}>Tipo de Serviço</label>
+      <div style={styles.card}>
+        <h2 style={styles.title}>Agendar Serviço</h2>
+        <form onSubmit={handleAgendar} style={styles.form}>
           <select
-            name="servico"
-            value={formData.servico}
-            onChange={handleChange}
+            value={especialidade}
+            onChange={(e) => setEspecialidade(e.target.value)}
             required
             style={styles.input}
           >
-            <option value="">Selecione...</option>
-            <option value="Ar-Condicionado">Ar-Condicionado</option>
-            <option value="Elétrica">Elétrica</option>
-            <option value="Hidráulica">Hidráulica</option>
-            <option value="Pintura">Pintura</option>
+            <option value="">Escolha a especialidade</option>
+            <option>Elétrica</option>
+            <option>Hidráulica</option>
+            <option>Ar Condicionado</option>
+            <option>Pintura</option>
+            <option>Jardinagem</option>
+            <option>Marcenaria</option>
           </select>
 
-          <label style={styles.label}>Data</label>
-          <input
-            type="date"
-            name="data"
-            value={formData.data}
-            onChange={handleChange}
-            required
-            style={styles.input}
-          />
-
-          <label style={styles.label}>Horário</label>
-          <input
-            type="time"
-            name="horario"
-            value={formData.horario}
-            onChange={handleChange}
-            required
-            style={styles.input}
-          />
-
-          <label style={styles.label}>Observação (opcional)</label>
           <textarea
-            name="observacao"
-            value={formData.observacao}
-            onChange={handleChange}
+            placeholder="Descreva o problema ou serviço desejado"
+            value={descricao}
+            onChange={(e) => setDescricao(e.target.value)}
+            required
             rows={4}
-            placeholder="Ex: Levar escada, verificar vazamento..."
             style={{ ...styles.input, resize: "none" }}
           />
 
-          <button type="submit" style={styles.button}>
-            Solicitar Agendamento
+          <input
+            type="date"
+            value={data}
+            onChange={(e) => setData(e.target.value)}
+            required
+            style={styles.input}
+          />
+
+          <input
+            type="time"
+            value={hora}
+            onChange={(e) => setHora(e.target.value)}
+            required
+            style={styles.input}
+          />
+
+          <button type="submit" style={styles.button} disabled={enviando}>
+            {enviando ? "Enviando..." : "Solicitar Agendamento"}
           </button>
         </form>
       </div>
-
-      {/* Modal */}
-      {modalAberto && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalContent}>
-            <p style={{ fontSize: 18, marginBottom: 20 }}>
-              ✅ Você receberá uma notificação quando seu agendamento for confirmado.
-            </p>
-            <button onClick={fecharModal} style={styles.button}>
-              Fechar
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
-};
+}
 
 const styles = {
   container: {
-    fontFamily: "Arial, sans-serif",
-    backgroundColor: "#0B4DA1",
+    backgroundColor: "#f3f6fb",
     minHeight: "100vh",
     display: "flex",
     justifyContent: "center",
-    alignItems: "center",
     padding: "40px 20px",
   },
-  formWrapper: {
+  card: {
     backgroundColor: "#fff",
+    borderRadius: 16,
     padding: 30,
-    borderRadius: 12,
-    boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
-    width: "100%",
     maxWidth: 500,
+    width: "100%",
+    boxShadow: "0 10px 25px rgba(0,0,0,0.08)",
   },
   title: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "bold",
-    color: "#0B4DA1",
+    color: "#0B0F28",
     marginBottom: 20,
-    textAlign: "center",
   },
   form: {
     display: "flex",
     flexDirection: "column",
-    gap: 20,
-  },
-  label: {
-    fontWeight: "bold",
-    color: "#333",
+    gap: 16,
   },
   input: {
-    padding: "10px 12px",
+    padding: 12,
     fontSize: 16,
-    borderRadius: 8,
+    borderRadius: 6,
     border: "1px solid #ccc",
+    backgroundColor: "#f1f8ff",
   },
   button: {
-    backgroundColor: "#0B4DA1",
-    color: "#fff",
-    padding: "12px",
+    padding: 14,
     fontSize: 16,
+    backgroundColor: "#0d47a1",
+    color: "#fff",
     border: "none",
-    borderRadius: 8,
+    borderRadius: 6,
     cursor: "pointer",
-    fontWeight: "bold",
-  },
-  modalOverlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100vw",
-    height: "100vh",
-    backgroundColor: "rgba(0,0,0,0.4)",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 999,
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    padding: 30,
-    borderRadius: 12,
-    boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
-    textAlign: "center",
-    maxWidth: "400px",
   },
 };
-
-export default Agendar;
