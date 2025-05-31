@@ -1,18 +1,33 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
 import mascote from "../assets/mascote.png";
 
 export default function Login() {
-  const [usuario, setUsuario] = useState("");
+  const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = () => {
-    if (usuario && senha) {
-      // aqui pode adicionar autenticação real futuramente
-      navigate("/home");
-    } else {
-      alert("Preencha todos os campos.");
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, senha);
+      const uid = userCredential.user.uid;
+      const userDoc = await getDoc(doc(db, "usuarios", uid));
+      if (userDoc.exists()) {
+        const dados = userDoc.data();
+        if (dados.tipo === "prestador") {
+          navigate("/painel-prestador");
+        } else {
+          navigate("/home");
+        }
+      } else {
+        alert("Usuário não encontrado no Firestore.");
+      }
+    } catch (error) {
+      alert("Erro ao fazer login: " + error.message);
     }
   };
 
@@ -21,30 +36,29 @@ export default function Login() {
       <div style={styles.card}>
         <div style={styles.leftColumn}>
           <h1 style={styles.title}>HouseFix</h1>
-          <p style={styles.subtitle}>Bem-vindo de volta!</p>
-
-          <input
-            type="text"
-            placeholder="Telefone ou e-mail"
-            style={styles.input}
-            value={usuario}
-            onChange={(e) => setUsuario(e.target.value)}
-          />
-          <input
-            type="password"
-            placeholder="Senha"
-            style={styles.input}
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-          />
-
-          <button style={styles.button} onClick={handleLogin}>Entrar</button>
-
+          <form onSubmit={handleLogin} style={styles.form}>
+            <input
+              type="email"
+              placeholder="E-mail"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              style={styles.input}
+            />
+            <input
+              type="password"
+              placeholder="Senha"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              required
+              style={styles.input}
+            />
+            <button type="submit" style={styles.button}>Entrar</button>
+          </form>
           <p style={styles.link}>
-            Não tem uma conta? <Link to="/registrar">Crie uma conta</Link>
+            Não tem uma conta? <Link to="/escolher-cadastro">Cadastre-se</Link>
           </p>
         </div>
-
         <div style={styles.rightColumn}>
           <img src={mascote} alt="Mascote HouseFix" style={styles.mascote} />
         </div>
@@ -69,46 +83,44 @@ const styles = {
     boxShadow: "0 8px 20px rgba(0, 0, 0, 0.1)",
     width: "90%",
     maxWidth: 950,
-    height: 500,
+    minHeight: 580,
   },
   leftColumn: {
     flex: 1,
-    padding: "50px 40px",
+    padding: "40px 35px",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
   },
   rightColumn: {
     flex: 1,
-    height: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#E3F2FD",
+    padding: "20px",
   },
   mascote: {
-    width: "100%",
-    height: "100%",
+    maxHeight: "100%",
+    maxWidth: "100%",
     objectFit: "contain",
-    objectPosition: "center",
-    borderTopRightRadius: 12,
-    borderBottomRightRadius: 12,
-    backgroundColor: "#E3F2FD",
-    padding: "10px"
   },
   title: {
     fontSize: 32,
     color: "#0d47a1",
-    marginBottom: 8,
+    marginBottom: 20,
   },
-  subtitle: {
-    fontSize: 16,
-    marginBottom: 30,
-    color: "#333",
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 16,
   },
   input: {
     padding: 12,
     fontSize: 16,
-    marginBottom: 15,
     borderRadius: 6,
     border: "1px solid #ccc",
-    backgroundColor: "#e3f2fd",
+    backgroundColor: "#f1f8ff",
   },
   button: {
     padding: 14,
@@ -118,7 +130,6 @@ const styles = {
     border: "none",
     borderRadius: 6,
     cursor: "pointer",
-    marginTop: 10,
   },
   link: {
     marginTop: 15,

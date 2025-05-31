@@ -24,6 +24,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/home" element={<Home />} />
         <Route path="/clientes" element={<Clientes />} />
         <Route path="/prestadores" element={<Prestadores />} />
@@ -33,7 +34,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/pagamentos" element={<Pagamentos />} />
         <Route path="/avaliacoes" element={<Avaliacoes />} />
         <Route path="/tipos" element={<Tipos />} />
-        <Route path="/registrar" element={<Register />} />
         <Route path="/cadastro" element={<Register />} />
         <Route path="/agendar" element={<Agendar />} />
         <Route path="/painel-prestador" element={<PainelPrestador />} />

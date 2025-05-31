@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import mascote from "../assets/mascote.png";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "../firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 export default function Register() {
   const [tipoUsuario, setTipoUsuario] = useState(localStorage.getItem("tipoCadastro") || "cliente");
@@ -15,12 +18,7 @@ export default function Register() {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const tipo = localStorage.getItem("tipoCadastro");
-    if (!tipo) navigate("/escolher-cadastro");
-  }, []);
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (senha !== confirmarSenha) {
@@ -28,18 +26,23 @@ export default function Register() {
       return;
     }
 
-    const novoUsuario = {
-      nome,
-      email,
-      telefone,
-      nascimento,
-      senha,
-      tipo: tipoUsuario,
-      ...(tipoUsuario === "prestador" && { cpfCnpj, especialidade }),
-    };
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
+      const uid = userCredential.user.uid;
 
-    localStorage.setItem("usuario", JSON.stringify(novoUsuario));
-    navigate("/login");
+      await setDoc(doc(db, "usuarios", uid), {
+        nome,
+        email,
+        telefone,
+        nascimento,
+        tipo: tipoUsuario,
+        ...(tipoUsuario === "prestador" && { cpfCnpj, especialidade })
+      });
+
+      navigate("/login");
+    } catch (error) {
+      alert("Erro ao registrar: " + error.message);
+    }
   };
 
   return (
@@ -48,29 +51,6 @@ export default function Register() {
         <div style={styles.leftColumn}>
           <h1 style={styles.title}>HouseFix</h1>
           <p style={styles.subtitle}>Crie sua conta gratuita</p>
-
-          <div style={styles.selector}>
-            <button
-              style={{
-                ...styles.selectorButton,
-                backgroundColor: tipoUsuario === "cliente" ? "#0d47a1" : "#ccc",
-                color: tipoUsuario === "cliente" ? "#fff" : "#000",
-              }}
-              onClick={() => setTipoUsuario("cliente")}
-            >
-              Cliente
-            </button>
-            <button
-              style={{
-                ...styles.selectorButton,
-                backgroundColor: tipoUsuario === "prestador" ? "#0d47a1" : "#ccc",
-                color: tipoUsuario === "prestador" ? "#fff" : "#000",
-              }}
-              onClick={() => setTipoUsuario("prestador")}
-            >
-              Prestador
-            </button>
-          </div>
 
           <form style={styles.form} onSubmit={handleSubmit}>
             <input
@@ -212,17 +192,6 @@ const styles = {
     fontSize: 16,
     marginBottom: 20,
     color: "#333",
-  },
-  selector: {
-    display: "flex",
-    gap: 10,
-    marginBottom: 16,
-  },
-  selectorButton: {
-    padding: "10px 18px",
-    border: "none",
-    borderRadius: 6,
-    cursor: "pointer",
   },
   form: {
     display: "flex",
