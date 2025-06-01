@@ -24,6 +24,7 @@ import SelecaoCadastro from './pages/SelecaoCadastro';
 import AgendarChamado from './pages/AgendarChamado';
 import ChamadosPendentes from './pages/ChamadosPendentes';
 import MeusAgendamentosPrestador from './pages/MeusAgendamentosPrestador';
+import PerfilCliente from './pages/PerfilCliente';
 
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -50,6 +51,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/agendar-chamado" element={<AgendarChamado />} />
           <Route path="/chamados-pendentes" element={<ChamadosPendentes />} />
           <Route path="/meus-agendamentos-prestador" element={<MeusAgendamentosPrestador />} />
+          <Route path="/perfil" element={<PerfilCliente />} />
+
 
         </Routes>
       </AuthProvider>
