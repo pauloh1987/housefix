@@ -6,7 +6,7 @@ import { auth, db } from "../firebase";
 import { doc, setDoc } from "firebase/firestore";
 
 export default function Register() {
-  const [tipoUsuario, setTipoUsuario] = useState(localStorage.getItem("tipoCadastro") || "cliente");
+  const [tipoUsuario, setTipoUsuario] = useState("cliente");
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -15,7 +15,6 @@ export default function Register() {
   const [nascimento, setNascimento] = useState("");
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [especialidade, setEspecialidade] = useState("");
-
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -27,18 +26,23 @@ export default function Register() {
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
-      const uid = userCredential.user.uid;
+      const cred = await createUserWithEmailAndPassword(auth, email, senha);
+      const uid = cred.user.uid;
 
       await setDoc(doc(db, "usuarios", uid), {
+        uid,
         nome,
         email,
         telefone,
         nascimento,
         tipo: tipoUsuario,
-        ...(tipoUsuario === "prestador" && { cpfCnpj, especialidade })
+        ...(tipoUsuario === "prestador" && {
+          cpfCnpj,
+          especialidade,
+        }),
       });
 
+      alert("Cadastro realizado com sucesso!");
       navigate("/login");
     } catch (error) {
       alert("Erro ao registrar: " + error.message);
@@ -52,72 +56,41 @@ export default function Register() {
           <h1 style={styles.title}>HouseFix</h1>
           <p style={styles.subtitle}>Crie sua conta gratuita</p>
 
+          <div style={styles.selector}>
+            <button
+              style={{
+                ...styles.selectorButton,
+                backgroundColor: tipoUsuario === "cliente" ? "#0d47a1" : "#ccc",
+                color: tipoUsuario === "cliente" ? "#fff" : "#000",
+              }}
+              onClick={() => setTipoUsuario("cliente")}
+            >
+              Cliente
+            </button>
+            <button
+              style={{
+                ...styles.selectorButton,
+                backgroundColor: tipoUsuario === "prestador" ? "#0d47a1" : "#ccc",
+                color: tipoUsuario === "prestador" ? "#fff" : "#000",
+              }}
+              onClick={() => setTipoUsuario("prestador")}
+            >
+              Prestador
+            </button>
+          </div>
+
           <form style={styles.form} onSubmit={handleSubmit}>
-            <input
-              type="text"
-              placeholder="Nome completo"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              style={styles.input}
-              required
-            />
-            <input
-              type="email"
-              placeholder="E-mail"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={styles.input}
-              required
-            />
-            <input
-              type="tel"
-              placeholder="Telefone"
-              value={telefone}
-              onChange={(e) => setTelefone(e.target.value)}
-              style={styles.input}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Senha"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              style={styles.input}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Confirmar senha"
-              value={confirmarSenha}
-              onChange={(e) => setConfirmarSenha(e.target.value)}
-              style={styles.input}
-              required
-            />
-            <input
-              type="date"
-              placeholder="Data de nascimento"
-              value={nascimento}
-              onChange={(e) => setNascimento(e.target.value)}
-              style={styles.input}
-              required
-            />
+            <input type="text" placeholder="Nome completo" value={nome} onChange={(e) => setNome(e.target.value)} style={styles.input} required />
+            <input type="email" placeholder="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} style={styles.input} required />
+            <input type="tel" placeholder="Telefone" value={telefone} onChange={(e) => setTelefone(e.target.value)} style={styles.input} required />
+            <input type="password" placeholder="Senha" value={senha} onChange={(e) => setSenha(e.target.value)} style={styles.input} required />
+            <input type="password" placeholder="Confirmar senha" value={confirmarSenha} onChange={(e) => setConfirmarSenha(e.target.value)} style={styles.input} required />
+            <input type="date" placeholder="Data de nascimento" value={nascimento} onChange={(e) => setNascimento(e.target.value)} style={styles.input} required />
 
             {tipoUsuario === "prestador" && (
               <>
-                <input
-                  type="text"
-                  placeholder="CPF ou CNPJ"
-                  value={cpfCnpj}
-                  onChange={(e) => setCpfCnpj(e.target.value)}
-                  style={styles.input}
-                  required
-                />
-                <select
-                  value={especialidade}
-                  onChange={(e) => setEspecialidade(e.target.value)}
-                  style={styles.input}
-                  required
-                >
+                <input type="text" placeholder="CPF ou CNPJ" value={cpfCnpj} onChange={(e) => setCpfCnpj(e.target.value)} style={styles.input} required />
+                <select value={especialidade} onChange={(e) => setEspecialidade(e.target.value)} style={styles.input} required>
                   <option value="">Especialidade</option>
                   <option>Elétrica</option>
                   <option>Hidráulica</option>
@@ -132,9 +105,7 @@ export default function Register() {
             <button type="submit" style={styles.button}>Registrar</button>
           </form>
 
-          <p style={styles.link}>
-            Já tem uma conta? <Link to="/login">Entrar</Link>
-          </p>
+          <p style={styles.link}>Já tem uma conta? <Link to="/login">Entrar</Link></p>
         </div>
 
         <div style={styles.rightColumn}>
@@ -192,6 +163,17 @@ const styles = {
     fontSize: 16,
     marginBottom: 20,
     color: "#333",
+  },
+  selector: {
+    display: "flex",
+    gap: 10,
+    marginBottom: 16,
+  },
+  selectorButton: {
+    padding: "10px 18px",
+    border: "none",
+    borderRadius: 6,
+    cursor: "pointer",
   },
   form: {
     display: "flex",
