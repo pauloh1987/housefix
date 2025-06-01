@@ -23,6 +23,8 @@ import Chat from './pages/Chat';
 import SelecaoCadastro from './pages/SelecaoCadastro';
 import AgendarChamado from './pages/AgendarChamado';
 import ChamadosPendentes from './pages/ChamadosPendentes';
+import MeusAgendamentosPrestador from './pages/MeusAgendamentosPrestador';
+
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -47,6 +49,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/escolher-cadastro" element={<SelecaoCadastro />} />
           <Route path="/agendar-chamado" element={<AgendarChamado />} />
           <Route path="/chamados-pendentes" element={<ChamadosPendentes />} />
+          <Route path="/meus-agendamentos-prestador" element={<MeusAgendamentosPrestador />} />
+
         </Routes>
       </AuthProvider>
     </BrowserRouter>

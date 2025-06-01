@@ -12,52 +12,42 @@ import {
 export default function ChamadosPendentes() {
   const [chamados, setChamados] = useState([]);
   const [especialidade, setEspecialidade] = useState("");
-  const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
 
   useEffect(() => {
     const fetchChamados = async () => {
-      try {
-        const user = auth.currentUser;
-        if (!user) {
-          setErro("Usuário não logado.");
-          setCarregando(false);
-          return;
-        }
+      const user = auth.currentUser;
+      if (!user) {
+        setErro("Usuário não logado.");
+        return;
+      }
 
+      try {
         const usuarioSnap = await getDocs(
           query(collection(db, "usuarios"), where("uid", "==", user.uid))
         );
 
         if (usuarioSnap.empty) {
           setErro("Prestador não encontrado no Firestore.");
-          setCarregando(false);
           return;
         }
 
         const dados = usuarioSnap.docs[0].data();
-        if (!dados.especialidade) {
-          setErro("Prestador sem especialidade cadastrada.");
-          setCarregando(false);
-          return;
-        }
-
         setEspecialidade(dados.especialidade);
 
         const q = query(
           collection(db, "agendamentos"),
           where("especialidade", "==", dados.especialidade),
-          where("status", "==", "Pendente"),
-          where("prestadorId", "==", null)
+          where("status", "==", "Pendente")
         );
 
         const snap = await getDocs(q);
-        const lista = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        const lista = snap.docs
+          .map((doc) => ({ id: doc.id, ...doc.data() }))
+          .filter((item) => !item.prestadorId); // <-- Aqui o filtro correto
         setChamados(lista);
       } catch (err) {
-        setErro("Erro ao buscar chamados: " + err.message);
-      } finally {
-        setCarregando(false);
+        setErro("Erro ao carregar chamados: " + err.message);
       }
     };
 
@@ -80,11 +70,10 @@ export default function ChamadosPendentes() {
   return (
     <div style={styles.container}>
       <h2 style={styles.title}>Responder Chamados</h2>
-      {carregando ? (
-        <p>Carregando chamados...</p>
-      ) : erro ? (
-        <p style={{ color: "red" }}>{erro}</p>
-      ) : chamados.length === 0 ? (
+
+      {erro && <p style={{ color: "red" }}>{erro}</p>}
+
+      {!erro && chamados.length === 0 ? (
         <p>Nenhum chamado pendente para a especialidade "{especialidade}".</p>
       ) : (
         <div style={styles.lista}>
@@ -93,7 +82,9 @@ export default function ChamadosPendentes() {
               <p><strong>Serviço:</strong> {c.especialidade}</p>
               <p><strong>Data:</strong> {c.data} às {c.hora}</p>
               <p><strong>Descrição:</strong> {c.descricao}</p>
-              <button onClick={() => aceitarChamado(c.id)} style={styles.botao}>Aceitar</button>
+              <button onClick={() => aceitarChamado(c.id)} style={styles.botao}>
+                Aceitar
+              </button>
             </div>
           ))}
         </div>
