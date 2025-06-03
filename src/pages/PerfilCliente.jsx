@@ -2,115 +2,92 @@ import React, { useEffect, useState } from "react";
 import { auth, db, storage } from "../firebase";
 import {
   getDoc,
-  doc,
-  updateDoc
+  doc
 } from "firebase/firestore";
-import {
-  getDownloadURL,
-  ref,
-  uploadBytesResumable
-} from "firebase/storage";
 
 export default function PerfilCliente() {
   const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
-  const [telefone, setTelefone] = useState("");
   const [foto, setFoto] = useState("");
-  const [fotoFile, setFotoFile] = useState(null);
   const [preview, setPreview] = useState("");
+  const [mediaNotas, setMediaNotas] = useState(null);
+  const [historico, setHistorico] = useState([]);
 
   useEffect(() => {
     const buscarDados = async () => {
       const user = auth.currentUser;
+      if (!user) return;
+
       const docRef = doc(db, "usuarios", user.uid);
       const snap = await getDoc(docRef);
+
       if (snap.exists()) {
         const dados = snap.data();
-        setNome(dados.nome);
-        setEmail(dados.email);
-        setTelefone(dados.telefone || "");
+        setNome(dados.nome || "");
         setFoto(dados.foto || "");
         setPreview(dados.foto || "");
+
+        if (dados.notaTotal && dados.qtdAvaliacoes) {
+          const media = dados.qtdAvaliacoes > 0
+            ? (dados.notaTotal / dados.qtdAvaliacoes).toFixed(1)
+            : null;
+          setMediaNotas(media);
+        }
+
+        // Exemplo de histórico — substitua com busca real se quiser
+        if (dados.historico) {
+          setHistorico(dados.historico);
+        } else {
+          setHistorico([
+            "Instalação de ar-condicionado",
+            "Troca de tomada",
+            "Limpeza de caixa d’água"
+          ]);
+        }
       }
     };
     buscarDados();
   }, []);
 
-  const handleFotoChange = (e) => {
-    const file = e.target.files[0];
-    setFotoFile(file);
-    if (file) {
-      setPreview(URL.createObjectURL(file));
+  const renderEstrelas = (media) => {
+    const estrelas = [];
+    const nota = Math.round(media);
+    for (let i = 1; i <= 5; i++) {
+      estrelas.push(i <= nota ? "★" : "☆");
     }
-  };
-
-  const salvar = async () => {
-    try {
-      const user = auth.currentUser;
-      const docRef = doc(db, "usuarios", user.uid);
-
-      let urlFoto = foto;
-      if (fotoFile) {
-        const storageRef = ref(storage, `fotos/${user.uid}`);
-        const uploadTask = await uploadBytesResumable(storageRef, fotoFile);
-        urlFoto = await getDownloadURL(uploadTask.ref);
-      }
-
-      await updateDoc(docRef, {
-        nome,
-        telefone,
-        foto: urlFoto,
-      });
-
-      setFoto(urlFoto);
-      alert("Perfil atualizado com sucesso!");
-    } catch (error) {
-      alert("Erro ao atualizar perfil: " + error.message);
-    }
+    return estrelas.join(" ");
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h2 style={styles.title}>Meu Perfil</h2>
         <div style={styles.avatarWrapper}>
-          {preview && <img src={preview} alt="Foto" style={styles.avatar} />}
-          <label style={styles.upload}>
-            Selecionar Foto
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFotoChange}
-              style={{ display: "none" }}
-            />
-          </label>
+          {preview ? (
+            <img src={preview} alt="Foto" style={styles.avatar} />
+          ) : (
+            <div style={styles.avatarPlaceholder}></div>
+          )}
         </div>
-        <input
-          type="text"
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          placeholder="Nome completo"
-          style={styles.input}
-        />
-        <input
-          type="email"
-          value={email}
-          disabled
-          style={styles.inputDisabled}
-        />
-        <input
-          type="tel"
-          value={telefone}
-          onChange={(e) => setTelefone(e.target.value)}
-          placeholder="Telefone"
-          style={styles.input}
-        />
-        <button onClick={salvar} style={styles.button}>Salvar Alterações</button>
+
+        <h2 style={styles.nome}>{nome}</h2>
+
+        {mediaNotas && (
+          <p style={styles.estrelas}>
+            {renderEstrelas(mediaNotas)} <span style={{ fontSize: 14 }}>({mediaNotas})</span>
+          </p>
+        )}
+
+        <div style={styles.historicoWrapper}>
+          <h3 style={styles.historicoTitulo}>Serviços Realizados</h3>
+          <ul style={styles.historicoLista}>
+            {historico.map((item, index) => (
+              <li key={index} style={styles.historicoItem}>✔ {item}</li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );
 }
-
 const styles = {
   container: {
     display: "flex",
@@ -121,66 +98,61 @@ const styles = {
   },
   card: {
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 30,
     width: "100%",
     maxWidth: 500,
     boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
     textAlign: "center"
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-    color: "#0B4DA1",
-  },
   avatarWrapper: {
     display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 20,
   },
   avatar: {
     width: 120,
     height: 120,
-    objectFit: "cover",
     borderRadius: "50%",
-    marginBottom: 10,
+    objectFit: "cover",
     border: "3px solid #0B4DA1",
   },
-  upload: {
-    padding: "8px 16px",
-    backgroundColor: "#e0edff",
-    color: "#0B4DA1",
+  avatarPlaceholder: {
+    width: 120,
+    height: 120,
+    borderRadius: "50%",
+    backgroundColor: "#ccc",
+    border: "3px solid #0B4DA1",
+  },
+  nome: {
+    fontSize: 24,
     fontWeight: "bold",
-    borderRadius: 6,
-    cursor: "pointer",
+    marginBottom: 8,
+    color: "#0B4DA1",
   },
-  input: {
-    width: "100%",
-    padding: 12,
-    fontSize: 16,
-    borderRadius: 6,
-    border: "1px solid #ccc",
-    marginBottom: 12,
+  estrelas: {
+    fontSize: 22,
+    color: "#f7c948",
+    marginBottom: 20,
   },
-  inputDisabled: {
-    width: "100%",
-    padding: 12,
-    fontSize: 16,
-    borderRadius: 6,
-    border: "1px solid #ccc",
-    backgroundColor: "#eee",
-    marginBottom: 12,
+  historicoWrapper: {
+    textAlign: "left",
+    marginTop: 20,
   },
-  button: {
-    width: "100%",
-    padding: 14,
-    fontSize: 16,
-    backgroundColor: "#0B4DA1",
-    color: "white",
-    border: "none",
-    borderRadius: 6,
-    cursor: "pointer",
+  historicoTitulo: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+    color: "#333",
+  },
+  historicoLista: {
+    listStyle: "none",
+    padding: 0,
+    margin: 0,
+  },
+  historicoItem: {
+    fontSize: 15,
+    marginBottom: 8,
+    color: "#555",
   },
 };

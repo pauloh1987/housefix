@@ -1,21 +1,43 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import './Navbar.css';
+// src/components/Navbar.jsx
+import React from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export default function Navbar() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const mostrarSeta = location.pathname !== "/home";
+
   return (
-    <nav className="navbar">
-      <div className="navbar-logo">🏠 HouseFix</div>
-      <ul className="navbar-links">
-        <li><Link to="/home">Início</Link></li>
-        <li><Link to="/clientes">Clientes</Link></li>
-        <li><Link to="/ordens">Ordens</Link></li>
-        <li><Link to="/agendamentos">Agendamentos</Link></li>
-        <li><Link to="/avaliacoes">Avaliações</Link></li>
-        <li><Link to="/relatorios">Relatórios</Link></li>
-        <li><Link to="/pagamentos">Pagamentos</Link></li>
-        <li><Link to="/tipos">Tipos</Link></li>
-      </ul>
+    <nav style={styles.navbar}>
+      {mostrarSeta && (
+        <button onClick={() => navigate(-1)} style={styles.backButton}>
+          ← Voltar
+        </button>
+      )}
+      <h1 style={styles.logo}>HouseFix</h1>
     </nav>
   );
 }
+
+const styles = {
+  navbar: {
+    display: "flex",
+    alignItems: "center",
+    padding: "10px 24px",
+    backgroundColor: "#0B4DA1",
+    color: "#fff",
+  },
+  backButton: {
+    marginRight: 20,
+    background: "none",
+    color: "#fff",
+    fontSize: 16,
+    border: "none",
+    cursor: "pointer",
+  },
+  logo: {
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+};

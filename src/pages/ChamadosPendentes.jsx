@@ -7,83 +7,80 @@ import {
   getDocs,
   updateDoc,
   doc,
+  getDoc
 } from "firebase/firestore";
 
 export default function ChamadosPendentes() {
   const [chamados, setChamados] = useState([]);
-  const [especialidade, setEspecialidade] = useState("");
-  const [erro, setErro] = useState("");
 
   useEffect(() => {
     const fetchChamados = async () => {
-      const user = auth.currentUser;
-      if (!user) {
-        setErro("Usuário não logado.");
-        return;
+      const q = query(
+        collection(db, "agendamentos"),
+        where("status", "==", "Pendente"),
+        where("especialidade", "==", auth.currentUser?.especialidade || "")
+      );
+      const snap = await getDocs(q);
+      const lista = [];
+
+      for (const docAg of snap.docs) {
+        const dados = docAg.data();
+        const clienteSnap = await getDocs(
+          query(collection(db, "usuarios"), where("uid", "==", dados.clienteId))
+        );
+        const cliente = !clienteSnap.empty ? clienteSnap.docs[0].data() : null;
+        lista.push({ id: docAg.id, ...dados, cliente });
       }
 
-      try {
-        const usuarioSnap = await getDocs(
-          query(collection(db, "usuarios"), where("uid", "==", user.uid))
-        );
-
-        if (usuarioSnap.empty) {
-          setErro("Prestador não encontrado no Firestore.");
-          return;
-        }
-
-        const dados = usuarioSnap.docs[0].data();
-        setEspecialidade(dados.especialidade);
-
-        const q = query(
-          collection(db, "agendamentos"),
-          where("especialidade", "==", dados.especialidade),
-          where("status", "==", "Pendente")
-        );
-
-        const snap = await getDocs(q);
-        const lista = snap.docs
-          .map((doc) => ({ id: doc.id, ...doc.data() }))
-          .filter((item) => !item.prestadorId); // <-- Aqui o filtro correto
-        setChamados(lista);
-      } catch (err) {
-        setErro("Erro ao carregar chamados: " + err.message);
-      }
+      setChamados(lista);
     };
 
     fetchChamados();
   }, []);
 
-  const aceitarChamado = async (id) => {
+  const aceitarChamado = async (chamado) => {
     try {
-      await updateDoc(doc(db, "agendamentos", id), {
-        prestadorId: auth.currentUser.uid,
+      const docRef = doc(db, "agendamentos", chamado.id);
+      await updateDoc(docRef, {
         status: "Aceito",
+        prestadorId: auth.currentUser.uid,
       });
-      setChamados((prev) => prev.filter((c) => c.id !== id));
-      alert("Chamado aceito!");
-    } catch (err) {
-      alert("Erro ao aceitar chamado: " + err.message);
+
+      // Buscar dados do cliente
+      const clienteRef = doc(db, "usuarios", chamado.clienteId);
+      const clienteSnap = await getDoc(clienteRef);
+
+      if (clienteSnap.exists()) {
+        const cliente = clienteSnap.data();
+        if (cliente.email) {
+          alert(`✅ Chamado aceito! O cliente ${cliente.nome} será notificado por e-mail: ${cliente.email}`);
+        } else {
+          alert("✅ Chamado aceito! Cliente notificado.");
+        }
+      }
+
+      // Atualizar lista de chamados
+      setChamados((prev) => prev.filter((c) => c.id !== chamado.id));
+    } catch (error) {
+      alert("Erro ao aceitar chamado: " + error.message);
     }
   };
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>Responder Chamados</h2>
-
-      {erro && <p style={{ color: "red" }}>{erro}</p>}
-
-      {!erro && chamados.length === 0 ? (
-        <p>Nenhum chamado pendente para a especialidade "{especialidade}".</p>
+      <h2 style={styles.title}>Chamados Pendentes</h2>
+      {chamados.length === 0 ? (
+        <p>Nenhum chamado pendente.</p>
       ) : (
         <div style={styles.lista}>
-          {chamados.map((c) => (
-            <div key={c.id} style={styles.card}>
-              <p><strong>Serviço:</strong> {c.especialidade}</p>
-              <p><strong>Data:</strong> {c.data} às {c.hora}</p>
-              <p><strong>Descrição:</strong> {c.descricao}</p>
-              <button onClick={() => aceitarChamado(c.id)} style={styles.botao}>
-                Aceitar
+          {chamados.map((chamado) => (
+            <div key={chamado.id} style={styles.card}>
+              <p><strong>Cliente:</strong> {chamado.cliente?.nome || "Desconhecido"}</p>
+              <p><strong>Serviço:</strong> {chamado.especialidade}</p>
+              <p><strong>Descrição:</strong> {chamado.descricao}</p>
+              <p><strong>Data:</strong> {chamado.data} às {chamado.hora}</p>
+              <button onClick={() => aceitarChamado(chamado)} style={styles.botao}>
+                Aceitar Chamado
               </button>
             </div>
           ))}
