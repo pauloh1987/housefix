@@ -26,6 +26,7 @@ import MeusAgendamentosPrestador from './pages/MeusAgendamentosPrestador';
 import LayoutComNavbar from './components/LayoutComNavbar.jsx';
 import MeusAgendamentosCliente from './pages/MeusAgendamentosCliente.jsx';
 import PerfilPrestador from './pages/PerfilPrestador.jsx';
+import PerfilClientePublico from './pages/PerfilClientePublico.jsx';
 
                                          
 
@@ -62,7 +63,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/meus-agendamentos-prestador" element={<MeusAgendamentosPrestador />} />
           <Route path="/meus-agendamentos" element={<MeusAgendamentosCliente />} />
           <Route path="/perfil-prestador" element={<PerfilPrestador />} />
-
+          <Route path="/perfil-cliente/:id" element={<PerfilClientePublico />} />
         </Route>
       </Routes>
     </BrowserRouter>

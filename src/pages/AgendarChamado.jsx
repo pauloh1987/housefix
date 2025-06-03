@@ -18,27 +18,13 @@ export default function AgendarChamado() {
 
       const user = auth.currentUser;
 
-      // Buscar prestadores com a especialidade
-      const q = query(
-        collection(db, "usuarios"),
-        where("tipo", "==", "prestador"),
-        where("especialidade", "==", especialidade)
-      );
-      const snapshot = await getDocs(q);
-      const idsPrestadores = snapshot.docs.map((doc) => doc.id);
-
-      if (idsPrestadores.length === 0) {
-        return alert("Nenhum prestador disponível com essa especialidade.");
-      }
-
       await addDoc(collection(db, "agendamentos"), {
         clienteId: user.uid,
         especialidade,
         descricao,
         data,
         hora,
-        status: "Pendente",
-        disponivelPara: idsPrestadores,
+        status: "pendente",
         prestadorId: null,
       });
 

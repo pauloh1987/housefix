@@ -1,116 +1,120 @@
-// src/pages/ChamadosPendentes.jsx
 import React, { useEffect, useState } from "react";
-import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
-import { db } from "../firebase";
+import { collection, query, where, getDocs, updateDoc, doc, getDoc } from "firebase/firestore";
+import { db, auth } from "../firebase";
 import { useNavigate } from "react-router-dom";
 
 export default function ChamadosPendentes() {
   const [chamados, setChamados] = useState([]);
-  const [feedback, setFeedback] = useState("");
-  const [nota, setNota] = useState(5);
-  const [selecionado, setSelecionado] = useState(null);
+  const [especialidade, setEspecialidade] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
-    const buscarChamados = async () => {
-      const snapshot = await getDocs(collection(db, "agendamentos"));
-      const pendentes = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter((ag) => ag.status === "pendente");
-      setChamados(pendentes);
+    const fetchChamados = async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const prestadorRef = doc(db, "usuarios", user.uid);
+      const prestadorSnap = await getDoc(prestadorRef);
+
+      if (prestadorSnap.exists()) {
+        const dados = prestadorSnap.data();
+        const esp = dados.especialidade || "";
+        setEspecialidade(esp);
+
+        const q = query(
+          collection(db, "agendamentos"),
+          where("status", "==", "pendente"),
+          where("especialidade", "==", esp)
+        );
+        const snap = await getDocs(q);
+        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setChamados(data);
+      }
     };
-    buscarChamados();
+
+    fetchChamados();
   }, []);
 
-  const concluirChamado = async (id) => {
-    if (!feedback || !nota) return alert("Preencha o feedback e a nota.");
+  const aceitarChamado = async (id) => {
     await updateDoc(doc(db, "agendamentos", id), {
-      status: "concluido",
-      feedbackPrestador: feedback,
-      notaPrestador: nota,
+      status: "aceito",
+      prestadorId: auth.currentUser.uid
     });
-    alert("Serviço marcado como concluído com sucesso!");
-    setChamados((prev) => prev.filter((c) => c.id !== id));
-    setSelecionado(null);
-    setFeedback("");
-    setNota(5);
+    alert("Chamado aceito!");
+    setChamados(chamados.filter(c => c.id !== id));
   };
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={styles.container}>
       <h2>Chamados Pendentes</h2>
-      {chamados.length === 0 && <p>Nenhum chamado pendente.</p>}
+      {chamados.length === 0 ? (
+        <p>Nenhum chamado pendente compatível com sua especialidade ({especialidade}).</p>
+      ) : (
+        chamados.map((chamado) => (
+          <div key={chamado.id} style={styles.card}>
+            <p><strong>Especialidade:</strong> {chamado.especialidade}</p>
+            <p><strong>Descrição:</strong> {chamado.descricao}</p>
+            <p><strong>Data:</strong> {chamado.data} às {chamado.hora}</p>
 
-      {chamados.map((c) => (
-        <div key={c.id} style={styles.card}>
-          <p><strong>Cliente:</strong> {c.nomeCliente}</p>
-          <p><strong>Serviço:</strong> {c.tipoServico}</p>
-          <button onClick={() => navigate(`/chat/${c.id}`)} style={styles.buttonSec}>Entrar no Chat</button>
-          <button onClick={() => setSelecionado(c.id)} style={styles.button}>Marcar como Concluído</button>
-
-          {selecionado === c.id && (
-            <div style={{ marginTop: 12 }}>
-              <textarea
-                placeholder="Escreva um feedback sobre o serviço"
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                style={styles.textarea}
-              />
-              <select value={nota} onChange={(e) => setNota(Number(e.target.value))} style={styles.select}>
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <option key={n} value={n}>{n} estrela{n > 1 ? "s" : ""}</option>
-                ))}
-              </select>
-              <button onClick={() => concluirChamado(c.id)} style={styles.button}>Confirmar Conclusão</button>
+            <div style={styles.buttons}>
+              <button onClick={() => aceitarChamado(chamado.id)} style={styles.buttonAceitar}>
+                Aceitar Chamado
+              </button>
+              <button onClick={() => navigate(`/perfil-cliente/${chamado.clienteId}`)} style={styles.buttonPerfil}>
+                Ver Perfil do Cliente
+              </button>
+              <button onClick={() => navigate(`/chat/${chamado.id}`)} style={styles.buttonChat}>
+                Abrir Chat
+              </button>
             </div>
-          )}
-        </div>
-      ))}
+          </div>
+        ))
+      )}
     </div>
   );
 }
 
 const styles = {
-  card: {
-    background: "#fff",
+  container: {
     padding: 20,
+    backgroundColor: "#f3f6fb",
+    minHeight: "100vh",
+  },
+  card: {
+    backgroundColor: "#fff",
+    padding: 20,
+    marginBottom: 20,
     borderRadius: 8,
-    marginBottom: 16,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+    boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
   },
-  button: {
+  buttons: {
+    display: "flex",
+    gap: 10,
     marginTop: 10,
+    flexWrap: "wrap",
+  },
+  buttonAceitar: {
+    backgroundColor: "#4CAF50",
+    color: "white",
+    border: "none",
     padding: "10px 16px",
+    borderRadius: 4,
+    cursor: "pointer",
+  },
+  buttonPerfil: {
     backgroundColor: "#0B4DA1",
-    color: "#fff",
+    color: "white",
     border: "none",
-    borderRadius: 4,
-    cursor: "pointer",
-    marginRight: 10,
-  },
-  buttonSec: {
-    marginTop: 10,
     padding: "10px 16px",
-    backgroundColor: "#ddd",
-    color: "#333",
-    border: "none",
     borderRadius: 4,
     cursor: "pointer",
-    marginRight: 10,
   },
-  textarea: {
-    width: "100%",
-    height: 80,
-    marginTop: 10,
-    padding: 10,
+  buttonChat: {
+    backgroundColor: "#FF9800",
+    color: "white",
+    border: "none",
+    padding: "10px 16px",
     borderRadius: 4,
-    border: "1px solid #ccc",
-  },
-  select: {
-    marginTop: 10,
-    padding: 8,
-    borderRadius: 4,
-    border: "1px solid #ccc",
-    width: "100%",
+    cursor: "pointer",
   },
 };
