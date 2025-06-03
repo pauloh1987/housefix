@@ -1,70 +1,116 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { auth, db, storage } from "../firebase";
 import {
   getDoc,
-  doc
+  doc,
+  updateDoc,
+  collection,
+  getDocs,
+  query,
+  where,
 } from "firebase/firestore";
+import {
+  getDownloadURL,
+  ref,
+  uploadBytesResumable,
+} from "firebase/storage";
 
 export default function PerfilCliente() {
-  const [nome, setNome] = useState("");
+  const [nome, setNome] = useState("Carregando...");
   const [foto, setFoto] = useState("");
   const [preview, setPreview] = useState("");
   const [mediaNotas, setMediaNotas] = useState(null);
-  const [historico, setHistorico] = useState([]);
+  const [ordens, setOrdens] = useState(0);
+  const [ultimaOrdem, setUltimaOrdem] = useState("Nenhuma");
+  const [fotoFile, setFotoFile] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const buscarDados = async () => {
       const user = auth.currentUser;
       if (!user) return;
 
-      const docRef = doc(db, "usuarios", user.uid);
-      const snap = await getDoc(docRef);
+      const userRef = doc(db, "usuarios", user.uid);
+      const userSnap = await getDoc(userRef);
 
-      if (snap.exists()) {
-        const dados = snap.data();
-        setNome(dados.nome || "");
+      if (userSnap.exists()) {
+        const dados = userSnap.data();
+        setNome(dados.nome || "Usuário");
         setFoto(dados.foto || "");
         setPreview(dados.foto || "");
 
-        if (dados.notaTotal && dados.qtdAvaliacoes) {
-          const media = dados.qtdAvaliacoes > 0
-            ? (dados.notaTotal / dados.qtdAvaliacoes).toFixed(1)
-            : null;
+        if (dados.notaTotal && dados.qtdAvaliacoes > 0) {
+          const media = (dados.notaTotal / dados.qtdAvaliacoes).toFixed(1);
           setMediaNotas(media);
         }
+      }
 
-        // Exemplo de histórico — substitua com busca real se quiser
-        if (dados.historico) {
-          setHistorico(dados.historico);
-        } else {
-          setHistorico([
-            "Instalação de ar-condicionado",
-            "Troca de tomada",
-            "Limpeza de caixa d’água"
-          ]);
-        }
+      const ordensRef = collection(db, "ordens");
+      const q = query(ordensRef, where("clienteId", "==", user.uid));
+      const snap = await getDocs(q);
+
+      setOrdens(snap.size);
+
+      if (snap.size > 0) {
+        const datas = snap.docs.map(doc => doc.data().data);
+        const ultima = datas.sort().reverse()[0];
+        const dataFormatada = new Date(ultima).toLocaleDateString();
+        setUltimaOrdem(dataFormatada);
       }
     };
+
     buscarDados();
   }, []);
 
-  const renderEstrelas = (media) => {
-    const estrelas = [];
-    const nota = Math.round(media);
-    for (let i = 1; i <= 5; i++) {
-      estrelas.push(i <= nota ? "★" : "☆");
+  const handleFotoChange = (e) => {
+    const file = e.target.files[0];
+    setFotoFile(file);
+    if (file) {
+      setPreview(URL.createObjectURL(file));
     }
-    return estrelas.join(" ");
+  };
+
+  const salvarFoto = async () => {
+    const user = auth.currentUser;
+    if (!user || !fotoFile) return;
+
+    const storageRef = ref(storage, `fotos/${user.uid}`);
+    const uploadTask = await uploadBytesResumable(storageRef, fotoFile);
+    const urlFoto = await getDownloadURL(uploadTask.ref);
+
+    await updateDoc(doc(db, "usuarios", user.uid), {
+      foto: urlFoto,
+    });
+
+    setFoto(urlFoto);
+    alert("Foto atualizada com sucesso!");
+  };
+
+  const renderEstrelas = (media) => {
+    const nota = Math.round(media);
+    return Array.from({ length: 5 }, (_, i) =>
+      i < nota ? "★" : "☆"
+    ).join(" ");
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <div style={styles.avatarWrapper}>
+        <div style={styles.avatarBox}>
           {preview ? (
-            <img src={preview} alt="Foto" style={styles.avatar} />
+            <img src={preview} style={styles.avatar} alt="foto" />
           ) : (
             <div style={styles.avatarPlaceholder}></div>
+          )}
+          <label style={styles.upload}>
+            Trocar foto
+            <input type="file" onChange={handleFotoChange} accept="image/*" style={{ display: "none" }} />
+          </label>
+          {fotoFile && (
+            <button onClick={salvarFoto} style={styles.botaoSalvar}>
+              Salvar
+            </button>
           )}
         </div>
 
@@ -76,14 +122,17 @@ export default function PerfilCliente() {
           </p>
         )}
 
-        <div style={styles.historicoWrapper}>
-          <h3 style={styles.historicoTitulo}>Serviços Realizados</h3>
-          <ul style={styles.historicoLista}>
-            {historico.map((item, index) => (
-              <li key={index} style={styles.historicoItem}>✔ {item}</li>
-            ))}
-          </ul>
+        <div style={styles.infoBox}>
+          <p><strong>Ordens realizadas:</strong> {ordens}</p>
+          <p><strong>Última ordem:</strong> {ultimaOrdem}</p>
         </div>
+
+        <ul style={styles.menu}>
+          <li onClick={() => navigate("/meus-agendamentos")} style={{ cursor: "pointer" }}>
+            📄 Minhas Ordens
+          </li>
+          <li style={{ color: "#f33", marginTop: 10 }}>🚪 Logout</li>
+        </ul>
       </div>
     </div>
   );
@@ -92,67 +141,85 @@ const styles = {
   container: {
     display: "flex",
     justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f3f6fb",
+    padding: 40,
+    backgroundColor: "#f5f8fb",
     minHeight: "100vh",
   },
   card: {
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 30,
+    maxWidth: 400,
     width: "100%",
-    maxWidth: 500,
-    boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
-    textAlign: "center"
+    boxShadow: "0 4px 18px rgba(0,0,0,0.1)",
+    textAlign: "center",
   },
-  avatarWrapper: {
+  avatarBox: {
     display: "flex",
-    justifyContent: "center",
-    marginBottom: 20,
+    flexDirection: "column",
+    alignItems: "center",
+    marginBottom: 10,
   },
   avatar: {
-    width: 120,
-    height: 120,
+    width: 100,
+    height: 100,
     borderRadius: "50%",
     objectFit: "cover",
     border: "3px solid #0B4DA1",
   },
   avatarPlaceholder: {
-    width: 120,
-    height: 120,
+    width: 100,
+    height: 100,
     borderRadius: "50%",
     backgroundColor: "#ccc",
     border: "3px solid #0B4DA1",
   },
-  nome: {
-    fontSize: 24,
+  upload: {
+    marginTop: 10,
+    backgroundColor: "#e0edff",
+    padding: "6px 12px",
+    borderRadius: 6,
+    fontSize: 14,
+    cursor: "pointer",
+    color: "#0B4DA1",
     fontWeight: "bold",
-    marginBottom: 8,
+  },
+  botaoSalvar: {
+    marginTop: 6,
+    backgroundColor: "#0B4DA1",
+    color: "white",
+    border: "none",
+    borderRadius: 6,
+    padding: "6px 12px",
+    fontSize: 14,
+    cursor: "pointer",
+  },
+  nome: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginTop: 10,
     color: "#0B4DA1",
   },
   estrelas: {
-    fontSize: 22,
     color: "#f7c948",
+    fontSize: 20,
     marginBottom: 20,
   },
-  historicoWrapper: {
+  infoBox: {
+    backgroundColor: "#f0f4f8",
+    padding: 16,
+    borderRadius: 8,
     textAlign: "left",
-    marginTop: 20,
-  },
-  historicoTitulo: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
+    marginBottom: 20,
+    fontSize: 15,
     color: "#333",
   },
-  historicoLista: {
+  menu: {
     listStyle: "none",
     padding: 0,
-    margin: 0,
-  },
-  historicoItem: {
+    textAlign: "left",
+    lineHeight: "2em",
     fontSize: 15,
-    marginBottom: 8,
-    color: "#555",
+    color: "#333",
   },
 };

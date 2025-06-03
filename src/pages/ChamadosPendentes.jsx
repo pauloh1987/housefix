@@ -1,125 +1,116 @@
+// src/pages/ChamadosPendentes.jsx
 import React, { useEffect, useState } from "react";
-import { db, auth } from "../firebase";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  updateDoc,
-  doc,
-  getDoc
-} from "firebase/firestore";
+import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
+import { db } from "../firebase";
+import { useNavigate } from "react-router-dom";
 
 export default function ChamadosPendentes() {
   const [chamados, setChamados] = useState([]);
+  const [feedback, setFeedback] = useState("");
+  const [nota, setNota] = useState(5);
+  const [selecionado, setSelecionado] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchChamados = async () => {
-      const q = query(
-        collection(db, "agendamentos"),
-        where("status", "==", "Pendente"),
-        where("especialidade", "==", auth.currentUser?.especialidade || "")
-      );
-      const snap = await getDocs(q);
-      const lista = [];
-
-      for (const docAg of snap.docs) {
-        const dados = docAg.data();
-        const clienteSnap = await getDocs(
-          query(collection(db, "usuarios"), where("uid", "==", dados.clienteId))
-        );
-        const cliente = !clienteSnap.empty ? clienteSnap.docs[0].data() : null;
-        lista.push({ id: docAg.id, ...dados, cliente });
-      }
-
-      setChamados(lista);
+    const buscarChamados = async () => {
+      const snapshot = await getDocs(collection(db, "agendamentos"));
+      const pendentes = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((ag) => ag.status === "pendente");
+      setChamados(pendentes);
     };
-
-    fetchChamados();
+    buscarChamados();
   }, []);
 
-  const aceitarChamado = async (chamado) => {
-    try {
-      const docRef = doc(db, "agendamentos", chamado.id);
-      await updateDoc(docRef, {
-        status: "Aceito",
-        prestadorId: auth.currentUser.uid,
-      });
-
-      // Buscar dados do cliente
-      const clienteRef = doc(db, "usuarios", chamado.clienteId);
-      const clienteSnap = await getDoc(clienteRef);
-
-      if (clienteSnap.exists()) {
-        const cliente = clienteSnap.data();
-        if (cliente.email) {
-          alert(`✅ Chamado aceito! O cliente ${cliente.nome} será notificado por e-mail: ${cliente.email}`);
-        } else {
-          alert("✅ Chamado aceito! Cliente notificado.");
-        }
-      }
-
-      // Atualizar lista de chamados
-      setChamados((prev) => prev.filter((c) => c.id !== chamado.id));
-    } catch (error) {
-      alert("Erro ao aceitar chamado: " + error.message);
-    }
+  const concluirChamado = async (id) => {
+    if (!feedback || !nota) return alert("Preencha o feedback e a nota.");
+    await updateDoc(doc(db, "agendamentos", id), {
+      status: "concluido",
+      feedbackPrestador: feedback,
+      notaPrestador: nota,
+    });
+    alert("Serviço marcado como concluído com sucesso!");
+    setChamados((prev) => prev.filter((c) => c.id !== id));
+    setSelecionado(null);
+    setFeedback("");
+    setNota(5);
   };
 
   return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>Chamados Pendentes</h2>
-      {chamados.length === 0 ? (
-        <p>Nenhum chamado pendente.</p>
-      ) : (
-        <div style={styles.lista}>
-          {chamados.map((chamado) => (
-            <div key={chamado.id} style={styles.card}>
-              <p><strong>Cliente:</strong> {chamado.cliente?.nome || "Desconhecido"}</p>
-              <p><strong>Serviço:</strong> {chamado.especialidade}</p>
-              <p><strong>Descrição:</strong> {chamado.descricao}</p>
-              <p><strong>Data:</strong> {chamado.data} às {chamado.hora}</p>
-              <button onClick={() => aceitarChamado(chamado)} style={styles.botao}>
-                Aceitar Chamado
-              </button>
+    <div style={{ padding: 24 }}>
+      <h2>Chamados Pendentes</h2>
+      {chamados.length === 0 && <p>Nenhum chamado pendente.</p>}
+
+      {chamados.map((c) => (
+        <div key={c.id} style={styles.card}>
+          <p><strong>Cliente:</strong> {c.nomeCliente}</p>
+          <p><strong>Serviço:</strong> {c.tipoServico}</p>
+          <button onClick={() => navigate(`/chat/${c.id}`)} style={styles.buttonSec}>Entrar no Chat</button>
+          <button onClick={() => setSelecionado(c.id)} style={styles.button}>Marcar como Concluído</button>
+
+          {selecionado === c.id && (
+            <div style={{ marginTop: 12 }}>
+              <textarea
+                placeholder="Escreva um feedback sobre o serviço"
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                style={styles.textarea}
+              />
+              <select value={nota} onChange={(e) => setNota(Number(e.target.value))} style={styles.select}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <option key={n} value={n}>{n} estrela{n > 1 ? "s" : ""}</option>
+                ))}
+              </select>
+              <button onClick={() => concluirChamado(c.id)} style={styles.button}>Confirmar Conclusão</button>
             </div>
-          ))}
+          )}
         </div>
-      )}
+      ))}
     </div>
   );
 }
 
 const styles = {
-  container: {
-    padding: 30,
-    backgroundColor: "#f3f6fb",
-    minHeight: "100vh",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#0B4DA1",
-    marginBottom: 20,
-  },
-  lista: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 16,
-  },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    background: "#fff",
     padding: 20,
-    boxShadow: "0 4px 10px rgba(0,0,0,0.08)",
+    borderRadius: 8,
+    marginBottom: 16,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
   },
-  botao: {
+  button: {
     marginTop: 10,
+    padding: "10px 16px",
     backgroundColor: "#0B4DA1",
     color: "#fff",
-    padding: "10px 16px",
     border: "none",
-    borderRadius: 8,
+    borderRadius: 4,
     cursor: "pointer",
+    marginRight: 10,
+  },
+  buttonSec: {
+    marginTop: 10,
+    padding: "10px 16px",
+    backgroundColor: "#ddd",
+    color: "#333",
+    border: "none",
+    borderRadius: 4,
+    cursor: "pointer",
+    marginRight: 10,
+  },
+  textarea: {
+    width: "100%",
+    height: 80,
+    marginTop: 10,
+    padding: 10,
+    borderRadius: 4,
+    border: "1px solid #ccc",
+  },
+  select: {
+    marginTop: 10,
+    padding: 8,
+    borderRadius: 4,
+    border: "1px solid #ccc",
+    width: "100%",
   },
 };

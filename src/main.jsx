@@ -24,6 +24,8 @@ import ChamadosPendentes from './pages/ChamadosPendentes';
 import PerfilCliente from './pages/PerfilCliente';
 import MeusAgendamentosPrestador from './pages/MeusAgendamentosPrestador';
 import LayoutComNavbar from './components/LayoutComNavbar.jsx';
+import MeusAgendamentosCliente from './pages/MeusAgendamentosCliente.jsx';
+import PerfilPrestador from './pages/PerfilPrestador.jsx';
 
                                          
 
@@ -58,7 +60,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/chamados-pendentes" element={<ChamadosPendentes />} />
           <Route path="/perfil-cliente" element={<PerfilCliente />} />
           <Route path="/meus-agendamentos-prestador" element={<MeusAgendamentosPrestador />} />
-          
+          <Route path="/meus-agendamentos" element={<MeusAgendamentosCliente />} />
+          <Route path="/perfil-prestador" element={<PerfilPrestador />} />
+
         </Route>
       </Routes>
     </BrowserRouter>
