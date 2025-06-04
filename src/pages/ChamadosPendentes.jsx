@@ -23,7 +23,7 @@ export default function ChamadosPendentes() {
 
         const q = query(
           collection(db, "agendamentos"),
-          where("status", "==", "pendente"),
+          where("status", "==", "Pendente"), // atualizado aqui ✅
           where("especialidade", "==", esp)
         );
         const snap = await getDocs(q);
@@ -37,7 +37,7 @@ export default function ChamadosPendentes() {
 
   const aceitarChamado = async (id) => {
     await updateDoc(doc(db, "agendamentos", id), {
-      status: "aceito",
+      status: "Aceito", // opcional: manter padronização com maiúscula também
       prestadorId: auth.currentUser.uid
     });
     alert("Chamado aceito!");

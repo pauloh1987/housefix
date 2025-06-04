@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { collection, query, where, getDocs, addDoc } from "firebase/firestore";
+import { collection, addDoc } from "firebase/firestore";
 import { db, auth } from "../firebase";
 import { useNavigate } from "react-router-dom";
 
@@ -20,11 +20,11 @@ export default function AgendarChamado() {
 
       await addDoc(collection(db, "agendamentos"), {
         clienteId: user.uid,
-        especialidade,
+        especialidade: especialidade.toLowerCase(),
         descricao,
         data,
         hora,
-        status: "pendente",
+        status: "Pendente", // Atualizado aqui ✅
         prestadorId: null,
       });
 
