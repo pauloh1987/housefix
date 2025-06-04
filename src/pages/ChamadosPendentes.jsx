@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { collection, query, where, getDocs, updateDoc, doc, getDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, updateDoc, doc, getDoc, arrayUnion } from "firebase/firestore";
 import { db, auth } from "../firebase";
 import { useNavigate } from "react-router-dom";
 
@@ -23,12 +23,32 @@ export default function ChamadosPendentes() {
 
         const q = query(
           collection(db, "agendamentos"),
-          where("status", "==", "Pendente"), // atualizado aqui ✅
+          where("status", "==", "Pendente"),
           where("especialidade", "==", esp)
         );
         const snap = await getDocs(q);
-        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setChamados(data);
+
+        const data = await Promise.all(
+          snap.docs.map(async (chamadoDoc) => {
+            const chamado = chamadoDoc.data();
+
+            // Se já foi recusado por este prestador, não exibe
+            if ((chamado.recusados || []).includes(user.uid)) return null;
+
+            const clienteRef = doc(db, "usuarios", chamado.clienteId);
+            const clienteSnap = await getDoc(clienteRef);
+            const clienteData = clienteSnap.exists() ? clienteSnap.data() : {};
+
+            return {
+              id: chamadoDoc.id,
+              ...chamado,
+              clienteFoto: clienteData.foto || null,
+              clienteNome: clienteData.nome || "Cliente"
+            };
+          })
+        );
+
+        setChamados(data.filter(c => c !== null));
       }
     };
 
@@ -37,28 +57,61 @@ export default function ChamadosPendentes() {
 
   const aceitarChamado = async (id) => {
     await updateDoc(doc(db, "agendamentos", id), {
-      status: "Aceito", // opcional: manter padronização com maiúscula também
+      status: "Aceito",
       prestadorId: auth.currentUser.uid
     });
     alert("Chamado aceito!");
     setChamados(chamados.filter(c => c.id !== id));
   };
 
+  const recusarChamado = async (id) => {
+    await updateDoc(doc(db, "agendamentos", id), {
+      recusados: arrayUnion(auth.currentUser.uid)
+    });
+    alert("Chamado recusado!");
+    setChamados(chamados.filter(c => c.id !== id));
+  };
+
   return (
     <div style={styles.container}>
-      <h2>Chamados Pendentes</h2>
+      <h2 style={styles.title}>Chamados Pendentes</h2>
       {chamados.length === 0 ? (
         <p>Nenhum chamado pendente compatível com sua especialidade ({especialidade}).</p>
       ) : (
         chamados.map((chamado) => (
           <div key={chamado.id} style={styles.card}>
-            <p><strong>Especialidade:</strong> {chamado.especialidade}</p>
-            <p><strong>Descrição:</strong> {chamado.descricao}</p>
-            <p><strong>Data:</strong> {chamado.data} às {chamado.hora}</p>
+            {chamado.clienteFoto && (
+              <div style={styles.clienteInfo}>
+                <img
+                  src={chamado.clienteFoto}
+                  alt="Foto do cliente"
+                  style={styles.fotoCliente}
+                />
+                <p style={styles.nomeCliente}>{chamado.clienteNome}</p>
+              </div>
+            )}
+
+            <div style={styles.infoBox}>
+              <p style={styles.label}>Especialidade</p>
+              <p style={styles.value}>{chamado.especialidade}</p>
+            </div>
+
+            <div style={styles.infoBox}>
+              <p style={styles.label}>Descrição</p>
+              <p style={styles.value}>{chamado.descricao}</p>
+            </div>
+
+            <div style={styles.infoBox}>
+              <p style={styles.label}>Data e Hora</p>
+              <p style={styles.value}>{chamado.data} às {chamado.hora}</p>
+            </div>
 
             <div style={styles.buttons}>
               <button onClick={() => aceitarChamado(chamado.id)} style={styles.buttonAceitar}>
                 Aceitar Chamado
+              </button>
+              <button onClick={() => recusarChamado(chamado.id)} style={styles.buttonRecusar}>
+                Recusar Chamado
               </button>
               <button onClick={() => navigate(`/perfil-cliente/${chamado.clienteId}`)} style={styles.buttonPerfil}>
                 Ver Perfil do Cliente
@@ -80,25 +133,75 @@ const styles = {
     backgroundColor: "#f3f6fb",
     minHeight: "100vh",
   },
+  title: {
+    marginBottom: 20,
+    color: "#0B4DA1",
+  },
   card: {
     backgroundColor: "#fff",
-    padding: 20,
-    marginBottom: 20,
+    padding: 24,
+    marginBottom: 24,
+    borderRadius: 12,
+    boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+    maxWidth: 600,
+  },
+  clienteInfo: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  fotoCliente: {
+    width: 90,
+    height: 90,
+    borderRadius: "50%",
+    objectFit: "cover",
+    border: "3px solid #0B4DA1",
+  },
+  nomeCliente: {
+    marginTop: 8,
+    fontWeight: "bold",
+    fontSize: 16,
+    color: "#0B4DA1",
+  },
+  infoBox: {
+    backgroundColor: "#f0f4ff",
+    padding: "10px 14px",
     borderRadius: 8,
-    boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
+    marginBottom: 10,
+  },
+  label: {
+    fontWeight: "bold",
+    fontSize: 14,
+    color: "#0B4DA1",
+    marginBottom: 4,
+  },
+  value: {
+    fontSize: 15,
+    color: "#333",
+    margin: 0,
   },
   buttons: {
     display: "flex",
     gap: 10,
-    marginTop: 10,
+    marginTop: 16,
     flexWrap: "wrap",
+    justifyContent: "center",
   },
   buttonAceitar: {
     backgroundColor: "#4CAF50",
     color: "white",
     border: "none",
     padding: "10px 16px",
-    borderRadius: 4,
+    borderRadius: 6,
+    cursor: "pointer",
+  },
+  buttonRecusar: {
+    backgroundColor: "#F44336",
+    color: "white",
+    border: "none",
+    padding: "10px 16px",
+    borderRadius: 6,
     cursor: "pointer",
   },
   buttonPerfil: {
@@ -106,7 +209,7 @@ const styles = {
     color: "white",
     border: "none",
     padding: "10px 16px",
-    borderRadius: 4,
+    borderRadius: 6,
     cursor: "pointer",
   },
   buttonChat: {
@@ -114,7 +217,7 @@ const styles = {
     color: "white",
     border: "none",
     padding: "10px 16px",
-    borderRadius: 4,
+    borderRadius: 6,
     cursor: "pointer",
   },
 };
