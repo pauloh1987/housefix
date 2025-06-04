@@ -5,6 +5,9 @@ import { useNavigate } from "react-router-dom";
 
 export default function MeusAgendamentosPrestador() {
   const [agendamentos, setAgendamentos] = useState([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalInfo, setModalInfo] = useState({ id: null, descricao: "", nota: 0 });
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -46,21 +49,28 @@ export default function MeusAgendamentosPrestador() {
     }
   };
 
-  const finalizarServico = async (id) => {
-    const confirmacao = window.confirm("Deseja marcar este serviço como concluído?");
-    if (!confirmacao) return;
+  const abrirModal = (id) => {
+    setModalInfo({ id, descricao: "", nota: 0 });
+    setModalOpen(true);
+  };
 
-    const descricaoConclusao = window.prompt("Descreva o que foi feito no serviço:");
-    const nota = window.prompt("De 1 a 5 estrelas, qual nota você dá ao serviço?");
+  const finalizarServico = async () => {
+    const { id, descricao, nota } = modalInfo;
+    if (!descricao || nota === 0) return alert("Preencha todos os campos");
 
     await updateDoc(doc(db, "agendamentos", id), {
       status: "Concluído",
-      descricaoConclusao: descricaoConclusao || "",
-      avaliacao: Number(nota) || null,
+      descricaoConclusao: descricao,
+      avaliacao: nota,
     });
 
-    alert("Serviço finalizado com sucesso!");
-    setAgendamentos(prev => prev.filter(a => a.id !== id));
+    setAgendamentos((prev) => prev.filter((a) => a.id !== id));
+    setModalOpen(false);
+    alert("Serviço concluído com sucesso!");
+  };
+
+  const selecionarNota = (valor) => {
+    setModalInfo((prev) => ({ ...prev, nota: valor }));
   };
 
   return (
@@ -99,6 +109,21 @@ export default function MeusAgendamentosPrestador() {
                 <p style={styles.value}>{formatarDataHora(a.data, a.hora)}</p>
               </div>
 
+              {a.status === "Concluído" && (
+                <>
+                  <div style={styles.infoBox}>
+                    <p style={styles.label}>O que foi feito</p>
+                    <p style={styles.value}>{a.descricaoConclusao || "Não informado"}</p>
+                  </div>
+                  <div style={styles.infoBox}>
+                    <p style={styles.label}>Avaliação</p>
+                    <p style={styles.value}>
+                      {a.avaliacao ? "⭐".repeat(a.avaliacao) + ` (${a.avaliacao})` : "Sem avaliação"}
+                    </p>
+                  </div>
+                </>
+              )}
+
               <button
                 onClick={() => navigate(`/chat/${a.id}`)}
                 style={styles.botao}
@@ -108,7 +133,7 @@ export default function MeusAgendamentosPrestador() {
 
               {a.status === "Aceito" && (
                 <button
-                  onClick={() => finalizarServico(a.id)}
+                  onClick={() => abrirModal(a.id)}
                   style={styles.botaoConcluir}
                 >
                   Finalizar Serviço
@@ -116,6 +141,41 @@ export default function MeusAgendamentosPrestador() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {modalOpen && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <h3>Finalizar Serviço</h3>
+            <textarea
+              placeholder="Descreva o que foi feito"
+              value={modalInfo.descricao}
+              onChange={(e) => setModalInfo({ ...modalInfo, descricao: e.target.value })}
+              style={styles.textarea}
+            />
+            <div style={styles.estrelas}>
+              {[1, 2, 3, 4, 5].map((num) => (
+                <span
+                  key={num}
+                  onClick={() => selecionarNota(num)}
+                  style={{
+                    fontSize: 28,
+                    cursor: "pointer",
+                    color: modalInfo.nota >= num ? "#FFD700" : "#ccc",
+                  }}
+                >
+                  ★
+                </span>
+              ))}
+            </div>
+            <button onClick={finalizarServico} style={styles.botaoFinalizar}>
+              Finalizar
+            </button>
+            <button onClick={() => setModalOpen(false)} style={styles.botaoCancelar}>
+              Cancelar
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -205,6 +265,64 @@ const styles = {
     border: "none",
     borderRadius: 8,
     fontSize: 15,
+    cursor: "pointer",
+    width: "100%",
+  },
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+  },
+  modal: {
+    backgroundColor: "#fff",
+    padding: 24,
+    borderRadius: 12,
+    maxWidth: 400,
+    width: "100%",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+  },
+  textarea: {
+    width: "100%",
+    minHeight: 80,
+    padding: 10,
+    fontSize: 15,
+    marginBottom: 16,
+    borderRadius: 6,
+    border: "1px solid #ccc",
+  },
+  estrelas: {
+    display: "flex",
+    gap: 8,
+    marginBottom: 20,
+  },
+  botaoFinalizar: {
+    backgroundColor: "#4CAF50",
+    color: "#fff",
+    border: "none",
+    padding: "10px 18px",
+    borderRadius: 8,
+    fontSize: 15,
+    cursor: "pointer",
+    marginBottom: 10,
+    width: "100%",
+  },
+  botaoCancelar: {
+    backgroundColor: "#ccc",
+    color: "#333",
+    border: "none",
+    padding: "8px 16px",
+    borderRadius: 8,
+    fontSize: 14,
     cursor: "pointer",
     width: "100%",
   },
