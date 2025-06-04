@@ -1,47 +1,90 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { db, auth } from "../firebase";
+import {
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  onSnapshot,
+  serverTimestamp,
+  getDoc,
+  doc,
+  getDocs,
+  where
+} from "firebase/firestore";
 
-const mensagensIniciais = [
-  { id: 1, de: "cliente", texto: "Olá! Estarei disponível no horário marcado.", hora: "09:00" },
-  { id: 2, de: "prestador", texto: "Perfeito! Estarei lá com as ferramentas.", hora: "09:05" },
-];
-
-const Chat = () => {
+export default function Chat() {
   const { agendamentoId } = useParams();
-  const [mensagens, setMensagens] = useState(mensagensIniciais);
+  const [mensagens, setMensagens] = useState([]);
   const [texto, setTexto] = useState("");
+  const [contato, setContato] = useState(null);
 
-  const enviarMensagem = () => {
-    if (texto.trim() === "") return;
+  useEffect(() => {
+    const q = query(
+      collection(db, "chats", agendamentoId, "mensagens"),
+      orderBy("timestamp")
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setMensagens(snapshot.docs.map(doc => doc.data()));
+    });
+    return () => unsubscribe();
+  }, [agendamentoId]);
 
-    const novaMsg = {
-      id: mensagens.length + 1,
-      de: "prestador", // ou "cliente", dependendo de quem estiver logado
-      texto,
-      hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+  useEffect(() => {
+    const fetchContato = async () => {
+      const agendamentoRef = doc(db, "agendamentos", agendamentoId);
+      const agendamentoSnap = await getDoc(agendamentoRef);
+      const dados = agendamentoSnap.data();
+      const outroUid = auth.currentUser.uid === dados.clienteId ? dados.prestadorId : dados.clienteId;
+
+      const userSnap = await getDocs(query(collection(db, "usuarios"), where("uid", "==", outroUid)));
+      if (!userSnap.empty) {
+        setContato(userSnap.docs[0].data());
+      }
     };
+    fetchContato();
+  }, [agendamentoId]);
 
-    setMensagens([...mensagens, novaMsg]);
+  const enviarMensagem = async () => {
+    if (!texto.trim()) return;
+    await addDoc(collection(db, "chats", agendamentoId, "mensagens"), {
+      de: auth.currentUser.uid,
+      texto: texto.trim(),
+      timestamp: serverTimestamp(),
+    });
     setTexto("");
+  };
+
+  const formatarHora = (data) => {
+    if (!data) return "";
+    const d = data.toDate();
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <h2 style={styles.title}>Chat do Agendamento #{agendamentoId}</h2>
+        {contato && (
+          <div style={styles.contatoBox}>
+            <img src={contato.foto} alt="Foto" style={styles.fotoContato} />
+            <h3 style={styles.nomeContato}>{contato.nome}</h3>
+          </div>
+        )}
 
         <div style={styles.chatBox}>
-          {mensagens.map((msg) => (
+          {mensagens.map((msg, i) => (
             <div
-              key={msg.id}
+              key={i}
               style={{
                 ...styles.mensagem,
-                alignSelf: msg.de === "cliente" ? "flex-start" : "flex-end",
-                backgroundColor: msg.de === "cliente" ? "#e0edff" : "#dcfce7",
+                alignSelf: msg.de === auth.currentUser.uid ? "flex-end" : "flex-start",
+                backgroundColor: msg.de === auth.currentUser.uid ? "#dcfce7" : "#e0edff",
+                animation: "fadeIn 0.3s ease"
               }}
             >
               <p style={styles.texto}>{msg.texto}</p>
-              <span style={styles.hora}>{msg.hora}</span>
+              <span style={styles.hora}>{formatarHora(msg.timestamp)}</span>
             </div>
           ))}
         </div>
@@ -51,15 +94,16 @@ const Chat = () => {
             type="text"
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && enviarMensagem()}
             placeholder="Digite sua mensagem..."
             style={styles.input}
           />
-          <button onClick={enviarMensagem} style={styles.botao}>Enviar</button>
+          <button onClick={enviarMensagem} style={styles.botao}>📨</button>
         </div>
       </div>
     </div>
   );
-};
+}
 
 const styles = {
   page: {
@@ -78,13 +122,26 @@ const styles = {
     boxShadow: "0 6px 12px rgba(0,0,0,0.1)",
     display: "flex",
     flexDirection: "column",
+    animation: "fadeIn 0.3s ease",
   },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#0B4DA1",
+  contatoBox: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
     marginBottom: 16,
-    textAlign: "center",
+    borderBottom: "1px solid #eee",
+    paddingBottom: 12,
+  },
+  fotoContato: {
+    width: 48,
+    height: 48,
+    borderRadius: "50%",
+    objectFit: "cover",
+  },
+  nomeContato: {
+    fontSize: 18,
+    color: "#0B4DA1",
+    fontWeight: "bold"
   },
   chatBox: {
     flex: 1,
@@ -98,8 +155,9 @@ const styles = {
   mensagem: {
     maxWidth: "70%",
     padding: "12px 16px",
-    borderRadius: 12,
+    borderRadius: 16,
     boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+    transition: "all 0.3s ease"
   },
   texto: {
     margin: 0,
@@ -131,9 +189,10 @@ const styles = {
     border: "none",
     padding: "10px 16px",
     borderRadius: 8,
+    fontSize: 18,
     fontWeight: "bold",
     cursor: "pointer",
   },
 };
 
-export default Chat;
+

@@ -9,7 +9,6 @@ import Home from './pages/Home';
 import Clientes from './pages/Clientes';
 import Prestadores from './pages/Prestadores';
 import Ordens from './pages/Ordens';
-import Agendamentos from './pages/Agendamentos';
 import Relatorios from './pages/Relatorios';
 import Pagamentos from './pages/Pagamentos';
 import Avaliacoes from './pages/Avaliacoes';
@@ -27,6 +26,7 @@ import LayoutComNavbar from './components/LayoutComNavbar.jsx';
 import MeusAgendamentosCliente from './pages/MeusAgendamentosCliente.jsx';
 import PerfilPrestador from './pages/PerfilPrestador.jsx';
 import PerfilClientePublico from './pages/PerfilClientePublico.jsx';
+import HistoricoPrestador from './pages/HistoricoPrestador.jsx';
 
                                          
 
@@ -49,7 +49,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/clientes" element={<Clientes />} />
           <Route path="/prestadores" element={<Prestadores />} />
           <Route path="/ordens" element={<Ordens />} />
-          <Route path="/agendamentos" element={<Agendamentos />} />
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/pagamentos" element={<Pagamentos />} />
           <Route path="/avaliacoes" element={<Avaliacoes />} />
@@ -61,9 +60,10 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/chamados-pendentes" element={<ChamadosPendentes />} />
           <Route path="/perfil-cliente" element={<PerfilCliente />} />
           <Route path="/meus-agendamentos-prestador" element={<MeusAgendamentosPrestador />} />
-          <Route path="/meus-agendamentos" element={<MeusAgendamentosCliente />} />
+          <Route path="/agendamentos" element={<MeusAgendamentosCliente />} />
           <Route path="/perfil-prestador" element={<PerfilPrestador />} />
           <Route path="/perfil-cliente/:id" element={<PerfilClientePublico />} />
+          <Route path="/historico-prestador" element={<HistoricoPrestador />} />
         </Route>
       </Routes>
     </BrowserRouter>

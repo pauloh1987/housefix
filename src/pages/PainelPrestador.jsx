@@ -18,6 +18,12 @@ export default function PainelPrestador() {
       rota: "/chamados-pendentes",
     },
     {
+      titulo: "Histórico de Serviços",
+      descricao: "Veja os serviços que você já concluiu",
+      icone: "✅",
+      rota: "/historico-prestador",
+    },
+    {
       titulo: "Meu Perfil",
       descricao: "Mantenha suas informações atualizadas",
       icone: "👤",
