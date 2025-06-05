@@ -27,6 +27,7 @@ import MeusAgendamentosCliente from './pages/MeusAgendamentosCliente.jsx';
 import PerfilPrestador from './pages/PerfilPrestador.jsx';
 import PerfilClientePublico from './pages/PerfilClientePublico.jsx';
 import HistoricoPrestador from './pages/HistoricoPrestador.jsx';
+import HistoricoCliente from "./pages/HistoricoCliente";
 
                                          
 
@@ -64,6 +65,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/perfil-prestador" element={<PerfilPrestador />} />
           <Route path="/perfil-cliente/:id" element={<PerfilClientePublico />} />
           <Route path="/historico-prestador" element={<HistoricoPrestador />} />
+          <Route path="/historico" element={<HistoricoCliente />} />
         </Route>
       </Routes>
     </BrowserRouter>

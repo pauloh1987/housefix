@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import mascote from "../assets/mascote.png";
 import { createUserWithEmailAndPassword } from "firebase/auth";
@@ -15,6 +15,8 @@ export default function Register() {
   const [nascimento, setNascimento] = useState("");
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [especialidade, setEspecialidade] = useState("");
+  const [cidade, setCidade] = useState("");
+  const [estado, setEstado] = useState("");
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -35,6 +37,8 @@ export default function Register() {
         email,
         telefone,
         nascimento,
+        cidade,
+        estado,
         tipo: tipoUsuario,
         ...(tipoUsuario === "prestador" && {
           cpfCnpj,
@@ -86,6 +90,8 @@ export default function Register() {
             <input type="password" placeholder="Senha" value={senha} onChange={(e) => setSenha(e.target.value)} style={styles.input} required />
             <input type="password" placeholder="Confirmar senha" value={confirmarSenha} onChange={(e) => setConfirmarSenha(e.target.value)} style={styles.input} required />
             <input type="date" placeholder="Data de nascimento" value={nascimento} onChange={(e) => setNascimento(e.target.value)} style={styles.input} required />
+            <input type="text" placeholder="Cidade" value={cidade} onChange={(e) => setCidade(e.target.value)} style={styles.input} required />
+            <input type="text" placeholder="Estado (UF)" value={estado} onChange={(e) => setEstado(e.target.value)} style={styles.input} required />
 
             {tipoUsuario === "prestador" && (
               <>

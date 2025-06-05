@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { collection, addDoc } from "firebase/firestore";
 import { db, auth } from "../firebase";
+import { collection, addDoc, doc, updateDoc, increment } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 export default function AgendarChamado() {
   const [especialidade, setEspecialidade] = useState("");
@@ -13,7 +14,11 @@ export default function AgendarChamado() {
   const solicitarAgendamento = async () => {
     try {
       if (!especialidade || !descricao || !data || !hora) {
-        return alert("Preencha todos os campos!");
+        return Swal.fire({
+          icon: "warning",
+          title: "Campos obrigatórios",
+          text: "Preencha todos os campos antes de enviar.",
+        });
       }
 
       const user = auth.currentUser;
@@ -24,14 +29,31 @@ export default function AgendarChamado() {
         descricao,
         data,
         hora,
-        status: "Pendente", // Atualizado aqui ✅
+        status: "Pendente",
         prestadorId: null,
       });
 
-      alert("Chamado enviado! Prestadores serão notificados.");
+      const clienteRef = doc(db, "usuarios", user.uid);
+      await updateDoc(clienteRef, {
+        chamadosFeitos: increment(1)
+      });
+
+      Swal.fire({
+        title: "Chamado enviado!",
+        text: "Prestadores serão notificados.",
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
+        position: "center",
+      });
+
       navigate("/agendamentos");
     } catch (error) {
-      alert("Erro ao solicitar agendamento: " + error.message);
+      Swal.fire({
+        icon: "error",
+        title: "Erro ao solicitar",
+        text: error.message,
+      });
     }
   };
 

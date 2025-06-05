@@ -13,6 +13,7 @@ const Home = () => {
         <div style={styles.grid}>
           <Card to="/agendamentos" emoji="📅" label="Ver Agendamentos" />
           <Card to="/agendar" emoji="🛠️" label="Agendar Novo Serviço" />
+          <Card to="/historico" emoji="🧾" label="Histórico de Serviços" />
           <Card to="/perfil-cliente" emoji="👤" label="Meu Perfil" />
         </div>
       </main>

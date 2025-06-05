@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { auth, db, storage } from "../firebase";
 import {
   getDoc,
@@ -15,15 +14,18 @@ import {
   ref,
   uploadBytesResumable,
 } from "firebase/storage";
+import { useNavigate } from "react-router-dom";
 
 export default function PerfilCliente() {
   const [nome, setNome] = useState("Carregando...");
   const [foto, setFoto] = useState("");
   const [preview, setPreview] = useState("");
   const [mediaNotas, setMediaNotas] = useState(null);
-  const [ordens, setOrdens] = useState(0);
-  const [ultimaOrdem, setUltimaOrdem] = useState("Nenhuma");
   const [fotoFile, setFotoFile] = useState(null);
+  const [qtdServicos, setQtdServicos] = useState(0);
+  const [ultimaData, setUltimaData] = useState("--/--/----");
+  const [cidade, setCidade] = useState("");
+  const [estado, setEstado] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -39,6 +41,8 @@ export default function PerfilCliente() {
         setNome(dados.nome || "Usuário");
         setFoto(dados.foto || "");
         setPreview(dados.foto || "");
+        setCidade(dados.cidade || "");
+        setEstado(dados.estado || "");
 
         if (dados.notaTotal && dados.qtdAvaliacoes > 0) {
           const media = (dados.notaTotal / dados.qtdAvaliacoes).toFixed(1);
@@ -46,17 +50,17 @@ export default function PerfilCliente() {
         }
       }
 
-      const ordensRef = collection(db, "ordens");
-      const q = query(ordensRef, where("clienteId", "==", user.uid));
-      const snap = await getDocs(q);
+      const ordensRef = collection(db, "agendamentos");
+      const q2 = query(ordensRef, where("clienteId", "==", user.uid), where("status", "==", "concluido"));
+      const snap2 = await getDocs(q2);
 
-      setOrdens(snap.size);
+      setQtdServicos(snap2.size);
 
-      if (snap.size > 0) {
-        const datas = snap.docs.map(doc => doc.data().data);
+      if (snap2.size > 0) {
+        const datas = snap2.docs.map(doc => doc.data().data);
         const ultima = datas.sort().reverse()[0];
         const dataFormatada = new Date(ultima).toLocaleDateString();
-        setUltimaOrdem(dataFormatada);
+        setUltimaData(dataFormatada);
       }
     };
 
@@ -94,6 +98,11 @@ export default function PerfilCliente() {
     ).join(" ");
   };
 
+  const handleLogout = async () => {
+    await auth.signOut();
+    navigate("/login");
+  };
+
   return (
     <div style={styles.container}>
       <div style={styles.card}>
@@ -122,21 +131,21 @@ export default function PerfilCliente() {
           </p>
         )}
 
+        <p style={styles.descricao}>Obrigado por usar o HouseFix, {nome.split(" ")[0]}!</p>
+
         <div style={styles.infoBox}>
-          <p><strong>Ordens realizadas:</strong> {ordens}</p>
-          <p><strong>Última ordem:</strong> {ultimaOrdem}</p>
+          <p><strong>📍 Cidade:</strong> {cidade || "Não informada"}</p>
+          <p><strong>🌎 Estado:</strong> {estado || "Não informado"}</p>
+          <p><strong>🛠 Serviços contratados:</strong> {qtdServicos}</p>
+          <p><strong>📅 Último serviço:</strong> {ultimaData}</p>
         </div>
 
-        <ul style={styles.menu}>
-          <li onClick={() => navigate("/meus-agendamentos")} style={{ cursor: "pointer" }}>
-            📄 Minhas Ordens
-          </li>
-          <li style={{ color: "#f33", marginTop: 10 }}>🚪 Logout</li>
-        </ul>
+        <button onClick={handleLogout} style={styles.logout}>🚪 Logout</button>
       </div>
     </div>
   );
 }
+
 const styles = {
   container: {
     display: "flex",
@@ -203,6 +212,11 @@ const styles = {
   estrelas: {
     color: "#f7c948",
     fontSize: 20,
+    marginBottom: 12,
+  },
+  descricao: {
+    fontSize: 15,
+    color: "#555",
     marginBottom: 20,
   },
   infoBox: {
@@ -214,12 +228,13 @@ const styles = {
     fontSize: 15,
     color: "#333",
   },
-  menu: {
-    listStyle: "none",
-    padding: 0,
-    textAlign: "left",
-    lineHeight: "2em",
+  logout: {
+    backgroundColor: "#f44336",
+    color: "white",
+    border: "none",
+    padding: "10px 20px",
+    borderRadius: 6,
     fontSize: 15,
-    color: "#333",
+    cursor: "pointer",
   },
 };

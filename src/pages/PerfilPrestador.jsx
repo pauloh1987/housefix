@@ -20,8 +20,9 @@ export default function PerfilPrestador() {
   const [foto, setFoto] = useState("");
   const [fotoFile, setFotoFile] = useState(null);
   const [preview, setPreview] = useState("");
-  const [avaliacao, setAvaliacao] = useState(0);
   const [historico, setHistorico] = useState([]);
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [mediaAvaliacao, setMediaAvaliacao] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -36,18 +37,23 @@ export default function PerfilPrestador() {
         setNome(dados.nome);
         setFoto(dados.foto || "");
         setPreview(dados.foto || "");
-        setAvaliacao(dados.avaliacao || 0);
       }
 
-      // Buscar histórico
       const q = query(
         collection(db, "agendamentos"),
         where("prestadorId", "==", user.uid),
         where("status", "==", "concluido")
       );
       const querySnap = await getDocs(q);
-      const historicoData = querySnap.docs.map(doc => doc.data());
+      const historicoData = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setHistorico(historicoData);
+
+      const feedbacksFiltrados = historicoData.filter(h => h.feedbackCliente || h.avaliacaoCliente);
+      setFeedbacks(feedbacksFiltrados);
+
+      const somatorio = feedbacksFiltrados.reduce((acc, f) => acc + (f.avaliacaoCliente || 0), 0);
+      const media = feedbacksFiltrados.length > 0 ? (somatorio / feedbacksFiltrados.length).toFixed(1) : 0;
+      setMediaAvaliacao(media);
     };
 
     fetchData();
@@ -104,25 +110,32 @@ export default function PerfilPrestador() {
         />
 
         <div style={styles.rating}>
+          <p style={{ fontWeight: "bold", marginBottom: 6 }}>Média de Avaliação: {mediaAvaliacao} / 5</p>
           {Array.from({ length: 5 }).map((_, i) => (
-            <span key={i} style={{ color: i < avaliacao ? "#FFD700" : "#ccc", fontSize: 24 }}>
+            <span key={i} style={{ color: i < Math.round(mediaAvaliacao) ? "#FFD700" : "#ccc", fontSize: 24 }}>
               ★
             </span>
           ))}
+          <p style={{ fontSize: 14, color: "#666", marginTop: 8 }}>Total de serviços concluídos: {historico.length}</p>
         </div>
 
         <button onClick={salvar} style={styles.button}>
           Salvar Alterações
         </button>
 
-        <h3 style={{ marginTop: 40 }}>Serviços Realizados</h3>
-        {historico.length === 0 ? (
-          <p style={{ color: "#777" }}>Nenhum serviço concluído ainda.</p>
+        <h3 style={{ marginTop: 40 }}>⭐ Feedbacks dos Clientes</h3>
+        {feedbacks.length === 0 ? (
+          <p style={{ color: "#777" }}>Nenhum feedback recebido ainda.</p>
         ) : (
-          <ul>
-            {historico.map((h, idx) => (
-              <li key={idx} style={{ marginTop: 8 }}>
-                {h.tipoServico} - {h.data}
+          <ul style={{ textAlign: "left", marginTop: 10 }}>
+            {feedbacks.map((f, i) => (
+              <li key={i} style={{ marginBottom: 16 }}>
+                <div style={{ marginBottom: 4 }}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <span key={star} style={{ color: f.avaliacaoCliente >= star ? "#FFD700" : "#ccc" }}>★</span>
+                  ))}
+                </div>
+                <p style={{ fontSize: 14, color: "#333" }}>{f.feedbackCliente || "Sem comentário."}</p>
               </li>
             ))}
           </ul>
