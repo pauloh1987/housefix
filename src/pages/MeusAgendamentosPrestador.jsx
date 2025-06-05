@@ -1,7 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { db, auth } from "../firebase";
-import { collection, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  doc,
+  onSnapshot,
+  getDoc
+} from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 export default function MeusAgendamentosPrestador() {
   const [agendamentos, setAgendamentos] = useState([]);
@@ -11,13 +21,13 @@ export default function MeusAgendamentosPrestador() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetch = async () => {
-      const q = query(
-        collection(db, "agendamentos"),
-        where("prestadorId", "==", auth.currentUser.uid),
-        where("status", "in", ["Aceito", "Concluído"])
-      );
-      const snap = await getDocs(q);
+    const q = query(
+      collection(db, "agendamentos"),
+      where("prestadorId", "==", auth.currentUser.uid),
+      where("status", "==", "Aceito")
+    );
+
+    const unsubscribe = onSnapshot(q, async (snap) => {
       const lista = [];
 
       for (const docAg of snap.docs) {
@@ -30,9 +40,9 @@ export default function MeusAgendamentosPrestador() {
       }
 
       setAgendamentos(lista);
-    };
+    });
 
-    fetch();
+    return () => unsubscribe();
   }, []);
 
   const formatarDataHora = (dataStr, horaStr) => {
@@ -56,17 +66,29 @@ export default function MeusAgendamentosPrestador() {
 
   const finalizarServico = async () => {
     const { id, descricao, nota } = modalInfo;
-    if (!descricao || nota === 0) return alert("Preencha todos os campos");
+    if (!descricao || nota === 0) return Swal.fire("Preencha todos os campos antes de concluir o serviço.");
 
-    await updateDoc(doc(db, "agendamentos", id), {
+    const chamadoRef = doc(db, "agendamentos", id);
+    const chamadoSnap = await getDoc(chamadoRef);
+    const chamadoData = chamadoSnap.data();
+
+    await updateDoc(chamadoRef, {
       status: "Concluído",
       descricaoConclusao: descricao,
-      avaliacao: nota,
+      feedback: {
+        texto: descricao,
+        estrelas: nota,
+        clienteNome: chamadoData.clienteNome || "Cliente"
+      },
     });
 
-    setAgendamentos((prev) => prev.filter((a) => a.id !== id));
     setModalOpen(false);
-    alert("Serviço concluído com sucesso!");
+    Swal.fire({
+      icon: "success",
+      title: "Serviço concluído",
+      text: "O serviço foi marcado como concluído com sucesso!",
+      confirmButtonText: "OK"
+    });
   };
 
   const selecionarNota = (valor) => {
@@ -109,36 +131,13 @@ export default function MeusAgendamentosPrestador() {
                 <p style={styles.value}>{formatarDataHora(a.data, a.hora)}</p>
               </div>
 
-              {a.status === "Concluído" && (
-                <>
-                  <div style={styles.infoBox}>
-                    <p style={styles.label}>O que foi feito</p>
-                    <p style={styles.value}>{a.descricaoConclusao || "Não informado"}</p>
-                  </div>
-                  <div style={styles.infoBox}>
-                    <p style={styles.label}>Avaliação</p>
-                    <p style={styles.value}>
-                      {a.avaliacao ? "⭐".repeat(a.avaliacao) + ` (${a.avaliacao})` : "Sem avaliação"}
-                    </p>
-                  </div>
-                </>
-              )}
-
-              <button
-                onClick={() => navigate(`/chat/${a.id}`)}
-                style={styles.botao}
-              >
+              <button onClick={() => navigate(`/chat/${a.id}`)} style={styles.botao}>
                 Entrar no Chat
               </button>
 
-              {a.status === "Aceito" && (
-                <button
-                  onClick={() => abrirModal(a.id)}
-                  style={styles.botaoConcluir}
-                >
-                  Finalizar Serviço
-                </button>
-              )}
+              <button onClick={() => abrirModal(a.id)} style={styles.botaoConcluir}>
+                Finalizar Serviço
+              </button>
             </div>
           ))}
         </div>

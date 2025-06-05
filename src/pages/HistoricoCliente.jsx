@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { db, auth } from "../firebase";
-import { collection, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
+import { collection, query, where, getDocs, updateDoc, doc, getDoc } from "firebase/firestore";
 import Swal from "sweetalert2";
 
 export default function HistoricoCliente() {
@@ -30,18 +30,8 @@ export default function HistoricoCliente() {
     fetch();
   }, []);
 
-  const handleAvaliacao = async (id, nota) => {
+  const handleAvaliacao = (id, nota) => {
     setAvaliacoes((prev) => ({ ...prev, [id]: nota }));
-    await updateDoc(doc(db, "agendamentos", id), { avaliacaoCliente: nota });
-    Swal.fire({
-      title: "Avaliação enviada!",
-      text: "Obrigado pelo seu feedback!",
-      icon: "success",
-      timer: 2000,
-      showConfirmButton: false,
-      position: "center",
-      toast: false
-    });
   };
 
   const handleFeedbackChange = (id, texto) => {
@@ -49,8 +39,30 @@ export default function HistoricoCliente() {
   };
 
   const enviarFeedback = async (id) => {
-    if (!feedbacks[id] || feedbacks[id].trim() === "") return;
-    await updateDoc(doc(db, "agendamentos", id), { feedbackCliente: feedbacks[id] });
+    const texto = feedbacks[id];
+    const estrelas = avaliacoes[id];
+
+    if (!texto || !estrelas) {
+      Swal.fire({
+        icon: "warning",
+        title: "Preencha todos os campos",
+        text: "Você precisa dar uma nota e escrever o feedback.",
+      });
+      return;
+    }
+
+    // Buscar nome do cliente
+    const clienteSnap = await getDoc(doc(db, "usuarios", auth.currentUser.uid));
+    const clienteNome = clienteSnap.exists() ? clienteSnap.data().nome : "Cliente";
+
+    await updateDoc(doc(db, "agendamentos", id), {
+      feedback: {
+        texto,
+        estrelas,
+        clienteNome,
+      },
+    });
+
     Swal.fire({
       title: "Feedback enviado!",
       text: "Agradecemos pela sua avaliação!",
@@ -58,7 +70,7 @@ export default function HistoricoCliente() {
       timer: 2000,
       showConfirmButton: false,
       position: "center",
-      toast: false
+      toast: false,
     });
   };
 
@@ -81,7 +93,7 @@ export default function HistoricoCliente() {
               </div>
               {item.prestador && (
                 <div style={styles.prestadorBox}>
-                  {item.prestador.foto && <img src={item.prestador.foto} alt="Prestador" style={styles.foto} />} 
+                  {item.prestador.foto && <img src={item.prestador.foto} alt="Prestador" style={styles.foto} />}
                   <p style={styles.subTitle}>{item.prestador.nome}</p>
                 </div>
               )}
@@ -94,7 +106,7 @@ export default function HistoricoCliente() {
                     style={{
                       fontSize: 22,
                       cursor: "pointer",
-                      color: (avaliacoes[item.id] || item.avaliacaoCliente) >= star ? "#FFD700" : "#ccc",
+                      color: (avaliacoes[item.id] || 0) >= star ? "#FFD700" : "#ccc",
                     }}
                   >
                     ★

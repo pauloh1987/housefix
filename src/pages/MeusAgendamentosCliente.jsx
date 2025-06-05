@@ -19,8 +19,13 @@ export default function MeusAgendamentosCliente() {
 
       for (const docAg of snap.docs) {
         const dados = docAg.data();
-        let prestador = null;
 
+        // Verifica se tem notificação ativa
+        if (dados.notificarCliente && dados.status === "Aceito") {
+          dados.avisoNovo = true;
+        }
+
+        let prestador = null;
         if (dados.prestadorId) {
           const prestadorSnap = await getDocs(
             query(collection(db, "usuarios"), where("uid", "==", dados.prestadorId))
@@ -55,6 +60,12 @@ export default function MeusAgendamentosCliente() {
         <div style={styles.lista}>
           {agendamentos.map((a) => (
             <div key={a.id} style={styles.card}>
+              {a.avisoNovo && (
+                <p style={{ color: "green", fontWeight: "bold", marginBottom: 10 }}>
+                  ✅ Seu chamado foi aceito!
+                </p>
+              )}
+
               <div style={styles.infoBox}>
                 <p style={styles.label}>Serviço</p>
                 <p style={styles.valor}>{a.especialidade}</p>

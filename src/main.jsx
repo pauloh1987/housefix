@@ -1,9 +1,12 @@
 // main.jsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "./firebase";
 import "./style.css";
 
+// Páginas
 import Login from './pages/Login';
 import Home from './pages/Home';
 import Clientes from './pages/Clientes';
@@ -22,29 +25,37 @@ import AgendarChamado from './pages/AgendarChamado';
 import ChamadosPendentes from './pages/ChamadosPendentes';
 import PerfilCliente from './pages/PerfilCliente';
 import MeusAgendamentosPrestador from './pages/MeusAgendamentosPrestador';
-import LayoutComNavbar from './components/LayoutComNavbar.jsx';
 import MeusAgendamentosCliente from './pages/MeusAgendamentosCliente.jsx';
 import PerfilPrestador from './pages/PerfilPrestador.jsx';
 import PerfilClientePublico from './pages/PerfilClientePublico.jsx';
 import HistoricoPrestador from './pages/HistoricoPrestador.jsx';
 import HistoricoCliente from "./pages/HistoricoCliente";
+import LayoutComNavbar from './components/LayoutComNavbar.jsx';
 
-                                         
+function AppRoutes() {
+  const [usuario, setUsuario] = useState(null);
+  const [carregando, setCarregando] = useState(true);
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUsuario(user);
+      setCarregando(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
+  if (carregando) return <p style={{ padding: 20 }}>Carregando...</p>;
 
+  return (
+    <Routes>
+      {/* Rotas públicas */}
+      <Route path="/" element={<Login />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/cadastro" element={<Register />} />
+      <Route path="/escolher-cadastro" element={<SelecaoCadastro />} />
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <Routes>
-        {/* Rotas sem navbar */}
-        <Route path="/" element={<Login />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/cadastro" element={<Register />} />
-        <Route path="/escolher-cadastro" element={<SelecaoCadastro />} />
-
-        {/* Rotas com navbar */}
+      {/* Rotas protegidas */}
+      {usuario ? (
         <Route element={<LayoutComNavbar />}>
           <Route path="/home" element={<Home />} />
           <Route path="/clientes" element={<Clientes />} />
@@ -67,7 +78,18 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/historico-prestador" element={<HistoricoPrestador />} />
           <Route path="/historico" element={<HistoricoCliente />} />
         </Route>
-      </Routes>
+      ) : (
+        // Redireciona qualquer rota privada para login
+        <Route path="*" element={<Navigate to="/login" />} />
+      )}
+    </Routes>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <AppRoutes />
     </BrowserRouter>
   </React.StrictMode>
 );

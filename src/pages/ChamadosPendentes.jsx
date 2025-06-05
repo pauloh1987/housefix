@@ -1,7 +1,17 @@
 import React, { useEffect, useState } from "react";
-import { collection, query, where, getDocs, updateDoc, doc, getDoc, arrayUnion } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  doc,
+  getDoc,
+  arrayUnion
+} from "firebase/firestore";
 import { db, auth } from "../firebase";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 export default function ChamadosPendentes() {
   const [chamados, setChamados] = useState([]);
@@ -32,7 +42,6 @@ export default function ChamadosPendentes() {
           snap.docs.map(async (chamadoDoc) => {
             const chamado = chamadoDoc.data();
 
-            // Se já foi recusado por este prestador, não exibe
             if ((chamado.recusados || []).includes(user.uid)) return null;
 
             const clienteRef = doc(db, "usuarios", chamado.clienteId);
@@ -58,18 +67,41 @@ export default function ChamadosPendentes() {
   const aceitarChamado = async (id) => {
     await updateDoc(doc(db, "agendamentos", id), {
       status: "Aceito",
-      prestadorId: auth.currentUser.uid
+      prestadorId: auth.currentUser.uid,
+      notificarCliente: true
     });
-    alert("Chamado aceito!");
+
     setChamados(chamados.filter(c => c.id !== id));
+
+    Swal.fire({
+      icon: "success",
+      title: "Chamado aceito!",
+      text: "Você aceitou o chamado com sucesso.",
+      confirmButtonText: "OK",
+      timer: 2000,
+      timerProgressBar: true,
+      showConfirmButton: false,
+      position: "center"
+    });
   };
 
   const recusarChamado = async (id) => {
     await updateDoc(doc(db, "agendamentos", id), {
       recusados: arrayUnion(auth.currentUser.uid)
     });
-    alert("Chamado recusado!");
+
     setChamados(chamados.filter(c => c.id !== id));
+
+    Swal.fire({
+      icon: "info",
+      title: "Chamado recusado",
+      text: "Você recusou o chamado.",
+      confirmButtonText: "OK",
+      timer: 2000,
+      timerProgressBar: true,
+      showConfirmButton: false,
+      position: "center"
+    });
   };
 
   return (
@@ -103,7 +135,9 @@ export default function ChamadosPendentes() {
 
             <div style={styles.infoBox}>
               <p style={styles.label}>Data e Hora</p>
-              <p style={styles.value}>{chamado.data} às {chamado.hora}</p>
+              <p style={styles.value}>
+                {chamado.data} às {chamado.hora}
+              </p>
             </div>
 
             <div style={styles.buttons}>
@@ -113,10 +147,16 @@ export default function ChamadosPendentes() {
               <button onClick={() => recusarChamado(chamado.id)} style={styles.buttonRecusar}>
                 Recusar Chamado
               </button>
-              <button onClick={() => navigate(`/perfil-cliente/${chamado.clienteId}`)} style={styles.buttonPerfil}>
+              <button
+                onClick={() => navigate(`/perfil-cliente/${chamado.clienteId}`)}
+                style={styles.buttonPerfil}
+              >
                 Ver Perfil do Cliente
               </button>
-              <button onClick={() => navigate(`/chat/${chamado.id}`)} style={styles.buttonChat}>
+              <button
+                onClick={() => navigate(`/chat/${chamado.id}`)}
+                style={styles.buttonChat}
+              >
                 Abrir Chat
               </button>
             </div>

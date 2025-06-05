@@ -15,6 +15,7 @@ import {
   uploadBytesResumable,
 } from "firebase/storage";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 export default function PerfilCliente() {
   const [nome, setNome] = useState("Carregando...");
@@ -88,7 +89,12 @@ export default function PerfilCliente() {
     });
 
     setFoto(urlFoto);
-    alert("Foto atualizada com sucesso!");
+    Swal.fire({
+      icon: "success",
+      title: "Sucesso!",
+      text: "Foto atualizada com sucesso!",
+      confirmButtonText: "OK",
+    });
   };
 
   const renderEstrelas = (media) => {

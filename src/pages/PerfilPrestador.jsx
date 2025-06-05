@@ -7,13 +7,14 @@ import {
   collection,
   query,
   where,
-  getDocs
+  getDocs,
 } from "firebase/firestore";
 import {
   ref,
   uploadBytesResumable,
-  getDownloadURL
+  getDownloadURL,
 } from "firebase/storage";
+import Swal from "sweetalert2";
 
 export default function PerfilPrestador() {
   const [nome, setNome] = useState("");
@@ -35,24 +36,48 @@ export default function PerfilPrestador() {
       if (snap.exists()) {
         const dados = snap.data();
         setNome(dados.nome);
-        setFoto(dados.foto || "");
-        setPreview(dados.foto || "");
+        setFoto(dados.foto);
       }
 
       const q = query(
         collection(db, "agendamentos"),
         where("prestadorId", "==", user.uid),
-        where("status", "==", "concluido")
+        where("status", "==", "Concluído")
       );
-      const querySnap = await getDocs(q);
-      const historicoData = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setHistorico(historicoData);
+      const querySnapshot = await getDocs(q);
 
-      const feedbacksFiltrados = historicoData.filter(h => h.feedbackCliente || h.avaliacaoCliente);
-      setFeedbacks(feedbacksFiltrados);
+      const servicos = [];
+      const comentarios = [];
 
-      const somatorio = feedbacksFiltrados.reduce((acc, f) => acc + (f.avaliacaoCliente || 0), 0);
-      const media = feedbacksFiltrados.length > 0 ? (somatorio / feedbacksFiltrados.length).toFixed(1) : 0;
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        servicos.push(data);
+
+        if (
+          data.feedback &&
+          data.feedback.texto &&
+          data.feedback.estrelas &&
+          data.feedback.clienteNome
+        ) {
+          comentarios.push({
+            cliente: data.feedback.clienteNome,
+            estrelas: data.feedback.estrelas,
+            texto: data.feedback.texto,
+          });
+        }
+      });
+
+      setHistorico(servicos);
+      setFeedbacks(comentarios);
+
+      const totalEstrelas = comentarios.reduce(
+        (acc, f) => acc + f.estrelas,
+        0
+      );
+      const media =
+        comentarios.length > 0
+          ? totalEstrelas / comentarios.length
+          : 0;
       setMediaAvaliacao(media);
     };
 
@@ -72,7 +97,10 @@ export default function PerfilPrestador() {
     let urlFoto = foto;
     if (fotoFile) {
       const storageRef = ref(storage, `fotos/${user.uid}`);
-      const uploadTask = await uploadBytesResumable(storageRef, fotoFile);
+      const uploadTask = await uploadBytesResumable(
+        storageRef,
+        fotoFile
+      );
       urlFoto = await getDownloadURL(uploadTask.ref);
     }
 
@@ -82,7 +110,12 @@ export default function PerfilPrestador() {
     });
 
     setFoto(urlFoto);
-    alert("Perfil atualizado com sucesso!");
+    Swal.fire({
+      icon: "success",
+      title: "Sucesso!",
+      text: "Perfil atualizado com sucesso!",
+      confirmButtonText: "OK",
+    });
   };
 
   return (
@@ -90,14 +123,23 @@ export default function PerfilPrestador() {
       <div style={styles.card}>
         <h2 style={styles.title}>Perfil do Prestador</h2>
         <div style={styles.avatarWrapper}>
-          {preview ? (
-            <img src={preview} alt="Foto" style={styles.avatar} />
+          {preview || foto ? (
+            <img
+              src={preview || foto}
+              alt="Foto"
+              style={styles.avatar}
+            />
           ) : (
             <div style={styles.avatarPlaceholder}></div>
           )}
           <label style={styles.upload}>
             Selecionar Foto
-            <input type="file" accept="image/*" onChange={handleFotoChange} hidden />
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFotoChange}
+              hidden
+            />
           </label>
         </div>
 
@@ -110,13 +152,34 @@ export default function PerfilPrestador() {
         />
 
         <div style={styles.rating}>
-          <p style={{ fontWeight: "bold", marginBottom: 6 }}>Média de Avaliação: {mediaAvaliacao} / 5</p>
+          <p style={{ fontWeight: "bold", marginBottom: 6 }}>
+            Média de Avaliação: {mediaAvaliacao.toFixed(1)} / 5
+          </p>
           {Array.from({ length: 5 }).map((_, i) => (
-            <span key={i} style={{ color: i < Math.round(mediaAvaliacao) ? "#FFD700" : "#ccc", fontSize: 24 }}>
+            <span
+              key={i}
+              style={
+                {
+                  color:
+                    i < Math.round(mediaAvaliacao)
+                      ? "#FFD700"
+                      : "#ccc",
+                  fontSize: 24,
+                }
+              }
+            >
               ★
             </span>
           ))}
-          <p style={{ fontSize: 14, color: "#666", marginTop: 8 }}>Total de serviços concluídos: {historico.length}</p>
+          <p
+            style={{
+              fontSize: 14,
+              color: "#666",
+              marginTop: 8,
+            }}
+          >
+            Total de serviços concluídos: {historico.length}
+          </p>
         </div>
 
         <button onClick={salvar} style={styles.button}>
@@ -125,17 +188,45 @@ export default function PerfilPrestador() {
 
         <h3 style={{ marginTop: 40 }}>⭐ Feedbacks dos Clientes</h3>
         {feedbacks.length === 0 ? (
-          <p style={{ color: "#777" }}>Nenhum feedback recebido ainda.</p>
+          <p style={{ color: "#777" }}>
+            Nenhum feedback recebido ainda.
+          </p>
         ) : (
-          <ul style={{ textAlign: "left", marginTop: 10 }}>
+          <ul
+            style={{
+              textAlign: "left",
+              marginTop: 10,
+              paddingLeft: 0,
+              listStyle: "none",
+            }}
+          >
             {feedbacks.map((f, i) => (
-              <li key={i} style={{ marginBottom: 16 }}>
+              <li
+                key={i}
+                style={{
+                  marginBottom: 16,
+                  borderBottom: "1px solid #eee",
+                  paddingBottom: 10,
+                }}
+              >
                 <div style={{ marginBottom: 4 }}>
                   {[1, 2, 3, 4, 5].map((star) => (
-                    <span key={star} style={{ color: f.avaliacaoCliente >= star ? "#FFD700" : "#ccc" }}>★</span>
+                    <span
+                      key={star}
+                      style={{
+                        color:
+                          f.estrelas >= star
+                            ? "#FFD700"
+                            : "#ccc",
+                      }}
+                    >
+                      ★
+                    </span>
                   ))}
                 </div>
-                <p style={{ fontSize: 14, color: "#333" }}>{f.feedbackCliente || "Sem comentário."}</p>
+                <p style={{ fontSize: 14, color: "#333" }}>
+                  <strong>{f.cliente}:</strong> {f.texto}
+                </p>
               </li>
             ))}
           </ul>

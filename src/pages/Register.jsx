@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import mascote from "../assets/mascote.png";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../firebase";
 import { doc, setDoc } from "firebase/firestore";
+import Swal from "sweetalert2";
 
 export default function Register() {
   const [tipoUsuario, setTipoUsuario] = useState("cliente");
@@ -19,11 +20,36 @@ export default function Register() {
   const [estado, setEstado] = useState("");
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user && !user.emailVerified) {
+        const interval = setInterval(async () => {
+          await user.reload();
+          if (user.emailVerified) {
+            clearInterval(interval);
+            Swal.fire({
+              title: "Conta verificada!",
+              text: "Login realizado com sucesso.",
+              icon: "success",
+              confirmButtonText: "OK",
+            });
+            navigate("/");
+          }
+        }, 3000);
+      }
+    });
+    return () => unsubscribe();
+  }, [navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (senha !== confirmarSenha) {
-      alert("As senhas não coincidem.");
+      Swal.fire({
+        icon: "error",
+        title: "Erro",
+        text: "As senhas não coincidem.",
+      });
       return;
     }
 
@@ -46,10 +72,26 @@ export default function Register() {
         }),
       });
 
-      alert("Cadastro realizado com sucesso!");
-      navigate("/login");
+      const actionCodeSettings = {
+        url: "http://localhost:5173/",
+        handleCodeInApp: false,
+      };
+
+      auth.languageCode = 'pt-BR';
+      await sendEmailVerification(cred.user, actionCodeSettings);
+
+      Swal.fire({
+        icon: "info",
+        title: "Verifique seu e-mail",
+        text: "Enviamos um link de verificação para seu e-mail. Verifique para ativar sua conta.",
+        confirmButtonText: "OK",
+      });
     } catch (error) {
-      alert("Erro ao registrar: " + error.message);
+      Swal.fire({
+        icon: "error",
+        title: "Erro ao registrar",
+        text: error.message,
+      });
     }
   };
 
